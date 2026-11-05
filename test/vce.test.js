@@ -25,11 +25,14 @@ test('Agile native VCE retains all questions and embedded diagrams',{skip:!proce
  const raw=readFileSync(process.env.VCE_AGILE_TEST_FILE),exam=validateExam(parseVce(raw));
  assert.equal(exam.title,'02 Agile 2027');assert.equal(exam.questions.length,95);
  assert.equal(exam.questions.filter(q=>JSON.stringify(q).includes('VCE_IMAGE')).length,6);
- assert.equal(exam.questions.filter(q=>!q.explanation).length,1); // Empty source explanation is valid.
+ assert.equal(exam.questions.filter(q=>!q.explanation).length,0); // Text matching explanation is extracted from the original prompt.
  for(const q of exam.questions){assert.ok(q.prompt.length);assert.ok(!q.prompt.includes('\0'));}
- assert.equal(exam.questions.filter(q=>q.options.some(o=>!o.length)).length,1);
- assert.deepEqual(exam.questions[6].options,['','','','']);
- assert.match(exam.questions[6].prompt,/doesn't support drag and drop/);
+ assert.equal(exam.questions.filter(q=>q.options.some(o=>!o.length)).length,0);
+ assert.equal(exam.questions[6].type,'matching');
+ assert.equal(exam.questions[6].matchingPrompts.length,4);
+ assert.ok(!exam.questions[6].prompt.includes('>>>'));
+ assert.ok(!exam.questions[6].prompt.includes('Explanation'));
+ assert.equal(exam.questions[6].options[exam.questions[6].answers[0]],'Iteration Review');
  assert.equal(score(exam.questions,Object.fromEntries(exam.questions.map(q=>[q.id,q.answers]))).score,1000);
  assert.throws(()=>parseVce(raw.subarray(0,raw.length-20)));
 });

@@ -5,3 +5,5 @@
 .case-study{white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}dialog{max-height:90vh;overflow:auto}
 
 .saved-sessions{margin-top:28px;border-top:1px solid #ddd;padding-top:12px}.saved-sessions h2{font-size:18px}.table-scroll{overflow-x:auto}.saved-sessions table{width:100%;border-collapse:collapse}.saved-sessions td,.saved-sessions th{text-align:left;padding:10px;border-bottom:1px solid #ddd}.saved-sessions button{margin:3px 0}.exam-image{width:auto;max-height:none;cursor:zoom-in}.diagram-viewer{overflow:auto;max-height:65vh}.diagram-viewer img{display:block;max-width:none;height:auto}
+
+.matching-options{display:grid;gap:16px;width:100%}.matching-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;padding:12px;background:#f7f6fc}.matching-row select{width:100%;min-width:0}.matching-row .right{grid-column:1/-1}@media(max-width:700px){.matching-row{grid-template-columns:minmax(0,1fr)}}

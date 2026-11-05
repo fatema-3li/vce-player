@@ -1,3 +1,4 @@
+import {matchingQuestion} from './matching.js';
 // Format-31 interoperability reader. Field framing documented at
 // https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md
 // Independently implemented; rejects unsupported structures rather than guessing.
@@ -79,5 +80,5 @@ export function parseVce(buffer){
   }
  }
  if(bytes.length-r.pos!==12||r.int()!==bytes.length)fail('VCE file length check failed.');
- return {title,number,questions,sourceFormat:'vce-31',passingScore,timeLimit,fileVersion};
+ return {title,number,questions:questions.map(matchingQuestion),sourceFormat:'vce-31',passingScore,timeLimit,fileVersion};
 }
