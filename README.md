@@ -14,7 +14,7 @@ npm start
 
 The server listens on port 3000. Open the app in a browser. Select Exam Sample and Start to configure your candidate name, question selection, training mode, and timer.
 
-Features include single/multiple-choice questions, section/count/range selection, marking, pause, local session save/resume, training explanations, automatic submission at timeout, scores out of 1000 (700 to pass), section breakdowns, filtered review and retakes, history, and printable reports. Browser local storage retains exams, sessions, and up to 50 reports. Data stays in the current browser; clearing browser data deletes it. The timer runs while the page is open and unpaused; this is a practice tool, not a proctored exam system.
+Features include single/multiple-choice questions, section/count/range selection, marking, pause, local session save/resume, answer explanations in every exam mode, automatic submission at timeout, scores out of 1000 (700 to pass), section breakdowns, filtered review and retakes, history, and printable reports. Browser local storage retains exams, sessions, and up to 50 reports. Data stays in the current browser; clearing browser data deletes it. The timer runs while the page is open and unpaused; this is a practice tool, not a proctored exam system.
 
 ## Import format
 
@@ -40,3 +40,5 @@ Answer indexes start at zero. Multiple answer indexes create a multiple-choice c
 ## Validation
 
 `npm test` checks grading, exact-match multiple-answer scoring, section totals, unanswered questions, and import validation. The application has no build step.
+
+The optional `scripts/browser-regression.mjs` checks History after reload and Show/Hide Answer in standard mode on a phone-sized viewport. With the server running and Playwright installed separately, run `node scripts/browser-regression.mjs`. Set `PLAYWRIGHT_MODULE` to an external Playwright module path if needed, `CHROMIUM_PATH` to your Chromium executable, and `APP_URL` to override the default local server address.
