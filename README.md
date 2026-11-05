@@ -44,3 +44,5 @@ Answer indexes start at zero. Multiple answer indexes create a multiple-choice c
 `npm test` checks grading, exact-match multiple-answer scoring, section totals, unanswered questions, and import validation. The application has no build step.
 
 The optional `scripts/browser-regression.mjs` checks History after reload and Show/Hide Answer in standard mode on a phone-sized viewport. With the server running and Playwright installed separately, run `node scripts/browser-regression.mjs`. Set `PLAYWRIGHT_MODULE` to an external Playwright module path if needed, `CHROMIUM_PATH` to your Chromium executable, and `APP_URL` to override the default local server address.
+
+On iPhone/iPad the file picker intentionally allows all file types because iOS can disable unfamiliar `.vce` extensions when an HTML accept filter is set. Select a `.vce` or `.json` file; the app validates its contents after selection.
