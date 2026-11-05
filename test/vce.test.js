@@ -20,3 +20,16 @@ test('native VCE fixture has complete graded questions',{skip:!process.env.VCE_T
  assert.equal(score(exam.questions,{}).score,0);
  assert.throws(()=>parseVce(raw.subarray(0,raw.length-20)));
 });
+
+test('Agile native VCE retains all questions and embedded diagrams',{skip:!process.env.VCE_AGILE_TEST_FILE},()=>{
+ const raw=readFileSync(process.env.VCE_AGILE_TEST_FILE),exam=validateExam(parseVce(raw));
+ assert.equal(exam.title,'02 Agile 2027');assert.equal(exam.questions.length,95);
+ assert.equal(exam.questions.filter(q=>JSON.stringify(q).includes('VCE_IMAGE')).length,6);
+ assert.equal(exam.questions.filter(q=>!q.explanation).length,1); // Empty source explanation is valid.
+ for(const q of exam.questions){assert.ok(q.prompt.length);assert.ok(!q.prompt.includes('\0'));}
+ assert.equal(exam.questions.filter(q=>q.options.some(o=>!o.length)).length,1);
+ assert.deepEqual(exam.questions[6].options,['','','','']);
+ assert.match(exam.questions[6].prompt,/doesn't support drag and drop/);
+ assert.equal(score(exam.questions,Object.fromEntries(exam.questions.map(q=>[q.id,q.answers]))).score,1000);
+ assert.throws(()=>parseVce(raw.subarray(0,raw.length-20)));
+});

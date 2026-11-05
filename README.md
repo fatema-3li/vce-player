@@ -18,7 +18,7 @@ Features include single/multiple-choice questions, section/count/range selection
 
 ## Import format
 
-Use Add to import a native `.vce` format 3.1 text-choice exam or a JSON file. Native import happens locally in the browser, with no upload service or conversion step. Format 3.1 support has been validated against the user-supplied 40-question Introduction exam, including three multiple-answer questions and explanations. Other VCE versions, images, interactive question types, named sections, case-study groups, and unsupported document structures are rejected explicitly; this is not universal VCE compatibility. Native exams retain their passing threshold on the 1000-point scale. Sample JSON downloads an example of the optional JSON format.
+Use Add to import a native `.vce` format 3.1 text-choice exam or a JSON file. Native import happens locally in the browser, with no upload service or conversion step. Format 3.1 support has been validated against the user-supplied 40-question Introduction exam, including three multiple-answer questions and explanations. Quoted text-format fields, embedded PNG/JPEG diagrams, and paragraph controls are also supported and tested with the 95-question Agile file. One Agile question has empty answer choices in the source and describes a drag-and-drop exercise; these empty choices are labeled explicitly rather than invented. Other VCE versions, interactive question types, named sections, case-study groups, and unsupported document structures are rejected explicitly; this is not universal VCE compatibility. Native exams retain their passing threshold on the 1000-point scale. Sample JSON downloads an example of the optional JSON format.
 
 Format reference: [VCE format research](https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md). The browser reader is independently implemented from the documented field framing and observed file structure. Private exam files are not included in the repository. Set `VCE_TEST_FILE` to the local Introduction fixture path to run its compatibility test.
 
@@ -46,3 +46,5 @@ Answer indexes start at zero. Multiple answer indexes create a multiple-choice c
 The optional `scripts/browser-regression.mjs` checks History after reload and Show/Hide Answer in standard mode on a phone-sized viewport. With the server running and Playwright installed separately, run `node scripts/browser-regression.mjs`. Set `PLAYWRIGHT_MODULE` to an external Playwright module path if needed, `CHROMIUM_PATH` to your Chromium executable, and `APP_URL` to override the default local server address.
 
 On iPhone/iPad the file picker intentionally allows all file types because iOS can disable unfamiliar `.vce` extensions when an HTML accept filter is set. Select a `.vce` or `.json` file; the app validates its contents after selection.
+
+Set `VCE_AGILE_TEST_FILE` to a local Agile fixture path to run its compatibility test. Both private fixture files remain outside Git.

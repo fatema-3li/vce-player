@@ -17,12 +17,28 @@ class Reader {
 function richText(bytes){
  const raw=new TextDecoder('latin1').decode(bytes); // ASCII controls only; content is decoded from original bytes.
  if(!raw.startsWith('-8 1 3 1\r\n'))fail('Unsupported VCE document format.');
- const matches=[...raw.matchAll(/(-?\d+(?: -?\d+){5,12})\r\n/g)];
+ const matches=[...raw.matchAll(/(-?\d+(?: -?\d+){4} (?:-?\d+|"[^"\r\n]*")(?: -?\d+){0,7})\r\n/g)];
  if(!matches.length)fail('Missing VCE text records.');
  let result='';
  for(let i=0;i<matches.length;i++){
   const match=matches[i],values=match[1].split(' ').map(Number),style=values[0];
-  if(style<0){if(style!==-12)fail('This VCE contains an unsupported image or rich-content item.');continue;}
+  if(style===-3){
+   const start=match.index+match[0].length;
+   const header=/^\r\n(TPngImage|TJPEGImage)\r\n(?:width=\d+\r\n)?(?:height=\d+\r\n)?/.exec(raw.slice(start));
+   if(!header)fail('Unsupported VCE image header.');
+   const lengthPos=start+header[0].length;
+   if(lengthPos+4>bytes.length)fail('Truncated VCE image header.');
+   const size=new DataView(bytes.buffer,bytes.byteOffset+lengthPos,4).getUint32(0,true),imageStart=lengthPos+4,end=imageStart+size;
+   if(!size||end>bytes.length)fail('Truncated VCE image.');
+   const image=bytes.subarray(imageStart,end),png=header[1]==='TPngImage';
+   if(png ? ![137,80,78,71,13,10,26,10].every((b,j)=>image[j]===b) : image[0]!==255||image[1]!==216)fail('Invalid VCE image signature.');
+   let binary='';for(let j=0;j<image.length;j+=8192)binary+=String.fromCharCode(...image.subarray(j,j+8192));
+   result+='\n[[VCE_IMAGE:'+ (png?'image/png':'image/jpeg')+';base64,'+btoa(binary)+']]\n';
+   while(i+1<matches.length&&matches[i+1].index<end)i++;
+   continue;
+  }
+  if(style===-9&&match[1]==='-9 0 0 0 0 0 7'){result+='\n';continue;}
+  if(style<0){if(style!==-12)fail('This VCE contains an unsupported rich-content item.');continue;}
   let body=bytes.subarray(match.index+match[0].length,i+1<matches.length?matches[i+1].index:bytes.length);
   if(body.length>=2&&body.at(-2)===13&&body.at(-1)===10)body=body.subarray(0,-2);
   const unicode=!!(values[3]&8);
