@@ -14,11 +14,13 @@ npm start
 
 The server listens on port 3000. Open the app in a browser. Select Exam Sample and Start to configure your candidate name, question selection, training mode, and timer.
 
-Features include single/multiple-choice questions, section/count/range selection, marking, pause, local session save/resume, answer explanations in every exam mode, automatic submission at timeout, scores out of 1000 (700 to pass), section breakdowns, filtered review and retakes, history, and printable reports. Browser local storage retains exams, sessions, and up to 50 reports. Data stays in the current browser; clearing browser data deletes it. The timer runs while the page is open and unpaused; this is a practice tool, not a proctored exam system.
+Features include single/multiple-choice questions, section/count/range selection, marking, pause, local session save/resume, answer explanations in every exam mode, automatic submission at timeout, scores out of 1000 (700 to pass by default; native VCE threshold retained), section breakdowns, filtered review and retakes, history, and printable reports. Browser local storage retains exams, sessions, and up to 50 reports. Data stays in the current browser; clearing browser data deletes it. The timer runs while the page is open and unpaused; this is a practice tool, not a proctored exam system.
 
 ## Import format
 
-Use Add to import a JSON file, or Sample JSON to download an example. Proprietary binary `.vce` files are **not supported**; screenshots do not provide their format. Convert/export question content to this documented format first. A native VCE importer requires format documentation and representative files.
+Use Add to import a native `.vce` format 3.1 text-choice exam or a JSON file. Native import happens locally in the browser, with no upload service or conversion step. Format 3.1 support has been validated against the user-supplied 40-question Introduction exam, including three multiple-answer questions and explanations. Other VCE versions, images, interactive question types, named sections, case-study groups, and unsupported document structures are rejected explicitly; this is not universal VCE compatibility. Native exams retain their passing threshold on the 1000-point scale. Sample JSON downloads an example of the optional JSON format.
+
+Format reference: [VCE format research](https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md). The browser reader is independently implemented from the documented field framing and observed file structure. Private exam files are not included in the repository. Set `VCE_TEST_FILE` to the local Introduction fixture path to run its compatibility test.
 
 ```json
 {
