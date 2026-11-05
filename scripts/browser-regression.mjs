@@ -1,3 +1,4 @@
+import {sample} from '../sample.js';
 // Run with PLAYWRIGHT_MODULE pointing to an installed Playwright index.mjs.
 // Start npm start first. Uses system Chromium; no app dependencies are required.
 import assert from 'node:assert/strict';
@@ -7,6 +8,7 @@ try {
  const page=await browser.newPage({viewport:{width:390,height:844}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.env.APP_URL||'http://localhost:3000');
+ await page.locator('#import').setInputFiles({name:'practice.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(sample))});await page.getByRole('row').filter({hasText:'Exam Sample'}).waitFor();
  await page.getByRole('button',{name:'History',exact:true}).click();
  assert.match(await page.locator('dialog').innerText(),/No completed exams yet/);
  await page.getByRole('button',{name:'Cancel',exact:true}).click();

@@ -1,9 +1,11 @@
+import {sample} from '../sample.js';
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
 try{
  const context=await browser.newContext({viewport:{width:390,height:844}});let page=await context.newPage();const url=process.env.APP_URL||'http://localhost:3000';
  await page.clock.install();await page.goto(url);assert.equal(await page.locator('nav').count(),0);
+ await page.locator('#import').setInputFiles({name:'practice.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(sample))});await page.getByRole('row').filter({hasText:'Exam Sample'}).waitFor();
  await page.getByRole('button',{name:'Start…',exact:true}).click();await page.locator('[name=candidate]').fill('Resume check');await page.getByRole('button',{name:'OK',exact:true}).click();
  await page.locator('#mark').check();await page.getByRole('button',{name:'Next',exact:true}).click();await page.locator('[name=answer][value="1"]').check();await page.locator('#mark').check();
  await page.selectOption('#review-filter','marked');await page.getByRole('button',{name:'Next',exact:true}).click();await page.clock.runFor(5000);

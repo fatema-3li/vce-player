@@ -3,3 +3,5 @@
 .exam-image{display:block;max-width:100%;height:auto;margin:12px 0;object-fit:contain}.option span:last-child{min-width:0}.question .strip{flex-wrap:wrap}
 
 .case-study{white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}dialog{max-height:90vh;overflow:auto}
+
+.saved-sessions{margin-top:28px;border-top:1px solid #ddd;padding-top:12px}.saved-sessions h2{font-size:18px}.table-scroll{overflow-x:auto}.saved-sessions table{width:100%;border-collapse:collapse}.saved-sessions td,.saved-sessions th{text-align:left;padding:10px;border-bottom:1px solid #ddd}.saved-sessions button{margin:3px 0}.exam-image{width:auto;max-height:none;cursor:zoom-in}.diagram-viewer{overflow:auto;max-height:65vh}.diagram-viewer img{display:block;max-width:none;height:auto}
