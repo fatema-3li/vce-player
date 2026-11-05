@@ -33,6 +33,37 @@ export function bindCalculator(dialog){
   if(key==='C')input.value='';else if(key==='⌫')input.value=input.value.slice(0,-1);else if(key==='√')input.value=`sqrt(${input.value||'0'})`;else if(key==='x²')input.value=`(${input.value||'0'})^2`;else if(key==='±')input.value=`-(${input.value||'0'})`;else if(input.value.length<200)input.value+=key;
   previous=input.value;
  });
- dialog.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key==='=')&&!e.target.matches('[data-close]')){e.preventDefault();evaluate();}});
+ dialog.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key==='=')&&!e.target.matches('[data-close],[data-calc-collapse],[data-calc-handle]')){e.preventDefault();evaluate();}});
  dialog.querySelector('[data-close]').textContent='Close';
+}
+
+// Nonmodal so the question can still be scrolled and answered while calculating.
+let floatingPosition=null;
+export function openCalculator(){
+ const existing=document.querySelector('.floating-calculator');
+ if(existing){existing.querySelector('[data-calc-handle]').focus();return existing;}
+ const panel=document.createElement('section');panel.className='floating-calculator';
+ panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');panel.setAttribute('aria-label','Calculator');
+ panel.innerHTML=`<div class="calc-titlebar"><button type="button" class="calc-handle" data-calc-handle aria-label="Move calculator" title="Drag to move, or use arrow keys">⠿ Calculator</button><button type="button" data-calc-collapse aria-label="Minimize calculator" aria-expanded="true">Minimize</button><button type="button" data-close>Close</button></div><div class="calc-body" data-calc-body>${calculatorMarkup()}</div>`;
+ document.body.append(panel);bindCalculator(panel);
+ const events=new AbortController(),handle=panel.querySelector('[data-calc-handle]');let drag=null;
+ function bounds(){const v=window.visualViewport;return {left:v?.offsetLeft||0,top:v?.offsetTop||0,width:v?.width||innerWidth,height:v?.height||innerHeight};}
+ function place(x,y){
+  const area=bounds(),rect=panel.getBoundingClientRect();
+  const left=Math.max(area.left+8,Math.min(x,area.left+area.width-rect.width-8)),top=Math.max(area.top+8,Math.min(y,area.top+area.height-rect.height-8));
+  panel.style.left=`${left}px`;panel.style.top=`${top}px`;floatingPosition={left,top};
+ }
+ function fit(){const a=bounds();panel.style.maxHeight=`${Math.max(80,a.height-16)}px`;panel.style.maxWidth=`${Math.max(200,a.width-16)}px`;place(floatingPosition?.left??a.left+a.width-panel.offsetWidth-16,floatingPosition?.top??a.top+80);}
+ fit();
+ const close=()=>{events.abort();drag=null;panel.remove();};panel.querySelector('[data-close]').onclick=close;
+ panel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close();}},{signal:events.signal});
+ const collapse=panel.querySelector('[data-calc-collapse]'),body=panel.querySelector('[data-calc-body]');
+ collapse.onclick=()=>{body.hidden=!body.hidden;collapse.textContent=body.hidden?'Expand':'Minimize';collapse.setAttribute('aria-label',body.hidden?'Expand calculator':'Minimize calculator');collapse.setAttribute('aria-expanded',String(!body.hidden));fit();};
+ handle.onpointerdown=e=>{if(!e.isPrimary||e.button!==0)return;const r=panel.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};handle.setPointerCapture(e.pointerId);};
+ handle.onpointermove=e=>{if(drag&&e.pointerId===drag.id){e.preventDefault();place(drag.left+e.clientX-drag.x,drag.top+e.clientY-drag.y);}};
+ handle.onpointerup=handle.onpointercancel=handle.onlostpointercapture=()=>{drag=null;};
+ handle.onkeydown=e=>{const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(d){e.preventDefault();const r=panel.getBoundingClientRect(),step=e.shiftKey?40:10;place(r.left+d[0]*step,r.top+d[1]*step);}};
+ window.addEventListener('resize',fit,{signal:events.signal});window.visualViewport?.addEventListener('resize',fit,{signal:events.signal});window.visualViewport?.addEventListener('scroll',fit,{signal:events.signal});
+ // Focus the move handle instead of triggering the phone's software keyboard.
+ handle.focus({preventScroll:true});return panel;
 }
