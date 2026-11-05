@@ -1,4 +1,4 @@
-import {matchingQuestion} from './matching.js?v=movable-calculator-20261105';
+import {matchingQuestion} from './matching.js?v=score-bar-20261105';
 // Format-31 interoperability reader. Field framing documented at
 // https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md
 // Independently implemented; rejects unsupported structures rather than guessing.
