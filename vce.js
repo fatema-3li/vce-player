@@ -70,11 +70,12 @@ export function parseVce(buffer){
    r.byte();const {n}=r.header(),end=r.pos+n;if(end>bytes.length)fail('Truncated VCE question.');
    const type=r.byte();if(type!==0&&type!==1)fail(`VCE question type ${type} is not supported yet.`);
    const section=r.int();r.int();const extra=r.int();if(extra!==0)fail('Unsupported VCE question extension.');
-   const docs=documents(r.field()),answer=r.text(),choices=r.int();r.take(3);r.field();
-   if(r.pos!==end||choices<2||choices>26||docs.length!==choices+2)fail('VCE question boundaries or choice counts do not match.');
+   const docs=documents(r.field()),answer=r.text(),choices=r.int(),choiceFlags=r.take(3),caseStudyTitle=r.text();
+   const hasCaseStudy=!!choiceFlags[2],choiceStart=hasCaseStudy?2:1;
+   if(r.pos!==end||choices<2||choices>26||docs.length!==choices+2+Number(hasCaseStudy))fail('VCE question boundaries or choice counts do not match.');
    if(!/^[A-Z]+$/.test(answer)||new Set(answer).size!==answer.length)fail('Invalid VCE correct-answer data.');
    const answers=[...answer].map(c=>c.charCodeAt(0)-65);if(answers.some(a=>a>=choices))fail('VCE answer refers to a missing choice.');
-   questions.push({id:`vce-${examIndex+1}-${i+1}`,section:section===0xffffffff?group:`${group} / Section ${section}`,prompt:docs[0],options:docs.slice(1,1+choices),answers,explanation:docs.at(-1)});
+   questions.push({id:`vce-${examIndex+1}-${i+1}`,section:section===0xffffffff?group:`${group} / Section ${section}`,prompt:docs[0],options:docs.slice(choiceStart,choiceStart+choices),answers,explanation:docs.at(-1),...(hasCaseStudy?{caseStudy:docs[1],caseStudyTitle}: {})});
   }
  }
  if(bytes.length-r.pos!==12||r.int()!==bytes.length)fail('VCE file length check failed.');

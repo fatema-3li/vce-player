@@ -48,3 +48,5 @@ The optional `scripts/browser-regression.mjs` checks History after reload and Sh
 On iPhone/iPad the file picker intentionally allows all file types because iOS can disable unfamiliar `.vce` extensions when an HTML accept filter is set. Select a `.vce` or `.json` file; the app validates its contents after selection.
 
 Set `VCE_AGILE_TEST_FILE` to a local Agile fixture path to run its compatibility test. Both private fixture files remain outside Git.
+
+Questions may carry optional `caseStudy` and `caseStudyTitle` text fields. A View Case Study button opens the content without changing answers; it also works during review and after session resume. The format-31 reader preserves inline case-study documents when the choice metadata enables them, using strict document-count validation. Neither private Introduction nor Agile fixture enables that field; native case-study layout still needs validation against a real case-bearing exam. Case-study exam groups remain unsupported. `scripts/case-study-regression.mjs` tests the viewer using original JSON content with the same external Playwright setup as the other browser check.
