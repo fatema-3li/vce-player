@@ -1,4 +1,4 @@
-import {matchingQuestion} from './matching.js?v=rich-lists-20261108';
+import {matchingQuestion} from './matching.js?v=risk-display-20261108';
 // Format-31 interoperability reader. Field framing documented at
 // https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md
 // Independently implemented; rejects unsupported structures rather than guessing.
