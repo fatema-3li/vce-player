@@ -1,9 +1,9 @@
-import {openCalculator} from './calculator.js?v=score-bar-20261105';
-import {renderMatching,bindMatching} from './matching-ui.js?v=score-bar-20261105';
-import {matchingQuestion} from './matching.js?v=score-bar-20261105';
-import {renderContent} from './content.js?v=score-bar-20261105';
-import {parseVce} from './vce.js?v=score-bar-20261105';
-import {score,correct,validateExam,isAnswered} from './engine.js?v=score-bar-20261105';
+import {openCalculator} from './calculator.js?v=rich-lists-20261108';
+import {renderMatching,bindMatching} from './matching-ui.js?v=rich-lists-20261108';
+import {matchingQuestion} from './matching.js?v=rich-lists-20261108';
+import {renderContent} from './content.js?v=rich-lists-20261108';
+import {parseVce} from './vce.js?v=rich-lists-20261108';
+import {score,correct,validateExam,isAnswered} from './engine.js?v=rich-lists-20261108';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function read(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}}
 const storedExams=read('exams',[]);

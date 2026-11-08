@@ -1,4 +1,4 @@
-import {matchingQuestion} from './matching.js?v=score-bar-20261105';
+import {matchingQuestion} from './matching.js?v=rich-lists-20261108';
 // Format-31 interoperability reader. Field framing documented at
 // https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md
 // Independently implemented; rejects unsupported structures rather than guessing.
@@ -39,6 +39,7 @@ function richText(bytes){
    continue;
   }
   if(style===-9&&match[1]==='-9 0 0 0 0 0 7'){result+='\n';continue;}
+  if(style===-11&&/^-11 0 0 0 0 0 [01] 0 1 [01]$/.test(match[1])){result+='\n• ';continue;}
   if(style<0){if(style!==-12)fail('This VCE contains an unsupported rich-content item.');continue;}
   let body=bytes.subarray(match.index+match[0].length,i+1<matches.length?matches[i+1].index:bytes.length);
   if(body.length>=2&&body.at(-2)===13&&body.at(-1)===10)body=body.subarray(0,-2);

@@ -36,3 +36,16 @@ test('Agile native VCE retains all questions and embedded diagrams',{skip:!proce
  assert.equal(score(exam.questions,Object.fromEntries(exam.questions.map(q=>[q.id,q.answers]))).score,1000);
  assert.throws(()=>parseVce(raw.subarray(0,raw.length-20)));
 });
+
+for(const [name,envKey,title,total] of [['Risk','VCE_RISK_TEST_FILE','09 Risk 2027',90],['Governance','VCE_GOVERNANCE_TEST_FILE','10 Governance 2027',95]]){
+ test(`${name} rich-content fixture preserves questions and grading`,{skip:!process.env[envKey]},()=>{
+  const raw=readFileSync(process.env[envKey]),exam=validateExam(parseVce(raw));
+  assert.equal(exam.title,title);assert.equal(exam.questions.length,total);
+  for(const q of exam.questions){assert.ok(q.prompt.trim());assert.ok(!q.prompt.includes('\0'));}
+  assert.equal(score(exam.questions,Object.fromEntries(exam.questions.map(q=>[q.id,q.answers]))).score,1000);
+  if(name==='Risk'){
+   for(const index of [76,77]){const q=exam.questions[index];assert.match(q.caseStudy,/Alpha Project - Risk Management Report/);assert.match(q.caseStudy,/• Monthly, multi-functional risk sessions/);assert.equal((q.caseStudy.match(/•/g)||[]).length,7);assert.equal((q.caseStudy.match(/VCE_IMAGE/g)||[]).length,2);assert.ok(!q.caseStudy.includes('-11 0 0'));}
+  }
+  assert.throws(()=>parseVce(raw.subarray(0,raw.length-20)));
+ });
+}
