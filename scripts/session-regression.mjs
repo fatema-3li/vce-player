@@ -10,9 +10,31 @@ try{
  await page.locator('#mark').check();await page.getByRole('button',{name:'Next',exact:true}).click();await page.locator('[name=answer][value="1"]').check();await page.locator('#mark').check();
  await page.selectOption('#review-filter','marked');await page.getByRole('button',{name:'Next',exact:true}).click();await page.clock.runFor(5000);
  const remaining=await page.locator('#clock').innerText();await page.getByRole('button',{name:'Save Session',exact:true}).click();await page.getByRole('button',{name:'Resume session',exact:true}).waitFor();
- const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('session')));assert.equal(saved.questionId,'q2');assert.equal(saved.filter,'marked');assert.equal(saved.paused,true);assert.equal(saved.exam.questions,undefined);
+ const saved=await page.evaluate(async()=>{
+  const {openPracticeStorage,loadPractice}=await import('/storage.js');
+  const db=await openPracticeStorage();
+  try{return (await loadPractice(db)).session;}finally{db.close();}
+ });assert.equal(saved.questionId,'q2');assert.equal(saved.filter,'marked');assert.equal(saved.paused,true);assert.equal(saved.exam.questions,undefined);
  await page.clock.runFor(60000);await page.close();page=await context.newPage();await page.goto(url);await page.getByRole('button',{name:'Resume session',exact:true}).click();
  assert.match(await page.locator('.question').innerText(),/Item 2 of 2/);assert.equal(await page.locator('[name=answer][value="1"]').isChecked(),true);assert.equal(await page.locator('#mark').isChecked(),true);assert.equal(await page.locator('#clock').innerText(),remaining);
  await page.getByRole('button',{name:'Save Session',exact:true}).click();const other=await browser.newContext();const otherPage=await other.newPage();await otherPage.goto(url);assert.equal(await otherPage.getByRole('button',{name:'Resume session',exact:true}).count(),0);await other.close();
- console.log('PASS: save exits to library; new tab resumes filtered question, answers, marks and timer; independent browser storage stays separate.');
+ await page.getByRole('button',{name:'Resume session',exact:true}).click();
+ page.once('dialog',d=>d.accept());
+ await page.getByRole('button',{name:'End Exam',exact:true}).click();
+ await page.locator('.report').waitFor();
+ await page.selectOption('#report-review','all');
+ await page.getByRole('button',{name:'View Marked',exact:true}).click();
+ assert.equal(await page.locator('#review-filter').inputValue(),'marked');
+ assert.match(await page.locator('.question').innerText(),/Item 1 of 2/);
+ assert.equal(await page.locator('#mark').isDisabled(),true);
+ await page.getByRole('button',{name:'Next',exact:true}).click();
+ await page.locator('.explanation').waitFor();
+ await page.getByRole('button',{name:'Back to Report',exact:true}).click();
+ await page.getByRole('button',{name:'Exit',exact:true}).click();
+ const largeExam={title:'Large import',questions:[{id:'large',section:'General',prompt:'A'.repeat(5_100_000),options:['Yes','No'],answers:[0]}]};
+ await page.locator('#import').setInputFiles({name:'large.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(largeExam))});
+ await page.getByRole('row').filter({hasText:'Large import'}).waitFor();
+ await page.reload();
+ await page.getByRole('row').filter({hasText:'Large import'}).waitFor();
+ console.log('PASS: save exits to library; new tab resumes filtered question, answers, marks and timer; independent browser storage stays separate; marked review and imports over 5 MB work.');
 }finally{await browser.close()}

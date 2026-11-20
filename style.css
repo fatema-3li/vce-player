@@ -19,3 +19,63 @@
 .bar.you.failed{background:#cc3333}
 
 .diagram-warning{display:block;padding:14px;border:1px solid #c7a45d;background:#fff9e9;color:#634b1e;line-height:1.5;white-space:normal}.damaged-diagram{margin:8px 0 16px;white-space:normal}.damaged-diagram summary{cursor:pointer;padding:8px}.question-diagrams{margin:22px 0;padding:14px;border:1px solid #ddd;border-radius:5px}.question-diagrams h3{font-size:1em;margin-top:0}
+
+/* Keep the question workspace legible at phone and desktop widths. */
+.view-exam {
+  --exam-accent: #244f62;
+  --exam-line: #d5e0e5;
+  background: #f2f6f7;
+  border-color: var(--exam-line);
+}
+.view-exam > header {
+  background: var(--exam-accent);
+  color: #fff;
+  min-height: 48px;
+}
+.exam-toolbar,
+.view-exam > .footer {
+  background: #fff;
+  border-color: var(--exam-line);
+  flex-wrap: wrap;
+  padding: 10px clamp(12px, 3vw, 32px);
+}
+.mark-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.exam-toolbar #clock { font-variant-numeric: tabular-nums; }
+.view-exam .question {
+  width: 100%;
+  max-width: 1050px;
+  margin-inline: auto;
+  padding: clamp(16px, 4vw, 42px);
+}
+.question-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--exam-line);
+}
+.view-exam .option {
+  background: #fff;
+  border: 1px solid var(--exam-line);
+  padding: 12px;
+}
+.view-exam .option:has(input:checked) {
+  border-color: var(--exam-accent);
+  background: #e5f0f3;
+}
+.view-exam button[aria-pressed="true"],
+.view-exam button[data-action="next"]:enabled {
+  border-color: var(--exam-accent);
+  background: var(--exam-accent);
+  color: #fff;
+}
+.view-exam > .status {
+  padding-inline: clamp(12px, 3vw, 32px);
+  background: #f2f6f7;
+  border-color: var(--exam-line);
+}

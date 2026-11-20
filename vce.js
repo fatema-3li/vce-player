@@ -1,4 +1,4 @@
-import {matchingQuestion} from './matching.js?v=risk-display-20261108';
+import {matchingQuestion} from './matching.js?v=exam-review-20261120';
 // Format-31 interoperability reader. Field framing documented at
 // https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md
 // Independently implemented; rejects unsupported structures rather than guessing.
@@ -52,7 +52,6 @@ function richText(bytes){
 function documents(bytes){const r=new Reader(bytes),docs=[];while(r.pos<bytes.length){if(docs.length>100)fail('Too many VCE document parts.');const {n}=r.header();docs.push(richText(r.take(n)));}return docs;}
 export function parseVce(buffer){
  const bytes=buffer instanceof Uint8Array?buffer:new Uint8Array(buffer);
- if(bytes.length>5e6)fail('VCE files must be smaller than 5 MB.');
  const r=new Reader(bytes);
  if(r.byte()!==0x85||r.byte()!==0xa8)fail('Not a valid VCE file.');
  const version=r.byte()*10+r.byte();

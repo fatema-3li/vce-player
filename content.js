@@ -1,5 +1,5 @@
-import {repairEncoding} from './text-encoding.js?v=risk-display-20261108';
-import {imageIssue} from './image-integrity.js?v=risk-display-20261108';
+import {repairEncoding} from './text-encoding.js?v=exam-review-20261120';
+import {imageIssue} from './image-integrity.js?v=exam-review-20261120';
 export function imageTokens(value){return String(value??'').match(/\[\[VCE_IMAGE:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}\]\]/g)||[];}
 // Exam content remains escaped text; only bounded raster-image tokens render.
 export function renderContent(value) {
