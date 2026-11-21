@@ -22,8 +22,10 @@ try {
  await page.getByRole('button',{name:'Hide Answer',exact:true}).click();
  assert.equal(await page.locator('.explanation').count(),0);
  assert.equal(await page.locator('[name=answer][value="0"]').isChecked(),true);
- page.once('dialog',d=>d.accept());
  await page.getByRole('button',{name:'End Exam',exact:true}).click();
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
+ await page.getByRole('button',{name:'Submit Exam',exact:true}).click();
+ await page.locator('.report').waitFor();
  assert.match(await page.locator('.report').innerText(),/Your score: 200\/1000/);
  await page.getByRole('button',{name:'Exit',exact:true}).click();
  await page.reload();

@@ -1,0 +1,130 @@
+import assert from 'node:assert/strict';
+import {score} from '../engine.js';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
+const url=process.env.APP_URL||'http://localhost:3000';
+const questions=[
+ {id:'first',section:'Basics',prompt:'Select the first answer.',options:['Correct answer','Other answer'],answers:[0]},
+ {id:'second',section:'Basics',prompt:'Select the other answer.',options:['First','Second'],answers:[1]},
+];
+const exam={id:'legacy',title:'Legacy practice',questions};
+const legacySession={exam,questions,candidate:'Migration candidate',limit:120,elapsed:20,answers:{first:[0]},marked:['first'],index:0,paused:true,filter:'marked',questionId:'first',date:'2026-01-01T20:00:00Z'};
+const legacyAttempt={...legacySession,date:'2025-01-01T20:00:00Z',result:score(questions,{first:[0]})};
+const fixtures={exams:[exam],session:legacySession,history:[legacyAttempt],candidate:legacySession.candidate,textSize:130};
+
+try{
+ for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
+  const mobile=viewport.width<700;
+  const context=await browser.newContext({viewport,isMobile:mobile,hasTouch:mobile});
+  const page=await context.newPage();
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.addInitScript(seed=>{
+   if(sessionStorage.getItem('legacySeeded'))return;
+   for(const [key,value] of Object.entries(seed))localStorage.setItem(key,JSON.stringify(value));
+   sessionStorage.setItem('legacySeeded','yes');
+  },fixtures);
+  await page.clock.install({time:new Date('2026-11-21T12:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-11-21T12:01:00Z'));
+  await page.goto(url);
+  const button=name=>page.getByRole('button',{name,exact:true});
+  const openDialog=()=>page.locator('dialog[open]');
+  const resume=async()=>{await button('Resume session').click();await page.locator('.question').waitFor()};
+  const assertFit=async()=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.getByRole('row').filter({hasText:'Legacy practice'}).first().waitFor();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('exams')),null);
+  await page.clock.runFor(30000);
+  await resume();
+  assert.match(await page.locator('.exam-shell > header').innerText(),/Legacy practice.*Migration candidate/s);
+  assert.equal(await page.locator('#clock').innerText(),'Time Remaining: 0:01:40');
+  assert.equal(await page.locator('#review-filter').inputValue(),'marked');
+  assert.equal(await page.locator('[name=answer][value="0"]').isChecked(),true);
+  assert.equal(await page.getByRole('button',{name:'Reset text size'}).innerText(),'130%');
+  await button('Comment').click();
+  await page.getByRole('textbox',{name:'Comment'}).fill('Check this wording');
+  await button('Save').click();
+  async function selectText(selector,length){
+   await page.locator(selector).evaluate((el,length)=>{
+    const range=document.createRange();
+    range.setStart(el.firstChild,0);
+    range.setEnd(el.firstChild,length);
+    const selection=getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+   },length);
+  }
+  await selectText('[data-annotate=prompt]',6);
+  await button('Highlight').click();
+  assert.equal(await page.locator('.annotation-highlight').innerText(),'Select');
+  await selectText('[data-annotate=option-1]',5);
+  await button('Strikethrough').click();
+  assert.equal(await page.locator('.annotation-strike').innerText(),'Other');
+  assert.equal(await page.locator('[name=answer][value="0"]').isChecked(),true);
+  await button('Navigator').click();
+  assert.match(await openDialog().getByRole('row').filter({hasText:'Question 1'}).innerText(),/Complete\s+Yes\s+Yes/);
+  assert.match(await openDialog().getByRole('row').filter({hasText:'Question 2'}).innerText(),/Unseen/);
+  await button('Question 2').click();
+  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/other/);
+  await button('Section Review').click();
+  await button('Flagged (1)').click();
+  assert.equal(await page.locator('.section-review tbody tr').count(),1);
+  await button('Pause').click();
+  await page.clock.runFor(30000);
+  assert.equal(await page.locator('#clock').innerText(),'Time Remaining: 0:01:40');
+  await button('Save Session').click();
+  await button('Resume session').waitFor();
+  await page.reload();
+  await button('Resume session').click();
+  assert.equal(await button('Flagged (1)').getAttribute('aria-pressed'),'true');
+  await assertFit();
+  await button('Question 1').click();
+  assert.equal(await page.locator('.annotation-highlight').innerText(),'Select');
+  assert.equal(await page.locator('.annotation-strike').innerText(),'Other');
+  await button('End Exam').click();
+  await button('Cancel').click();
+  await button('End Exam').click();
+  await button('Continue').click();
+  await button('Cancel').click();
+  assert.equal(await page.locator('.report').count(),0);
+  await button('End Exam').click();
+  await button('Continue').click();
+  await button('Submit Exam').click();
+  await page.locator('.report').waitFor();
+  assert.match(await page.locator('.report').innerText(),/Your score: 500\/1000/);
+  await button('View Marked').click();
+  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/first/);
+  assert.equal(await page.locator('#review-filter').inputValue(),'marked');
+  await page.selectOption('#review-filter','incorrect');
+  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/other/);
+  await page.selectOption('#review-filter','incomplete');
+  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/other/);
+  await button('Back to Report').click();
+  await button('Exit').click();
+  await button('Start…').click();
+  assert.equal(await page.locator('[name=candidate]').inputValue(),'Migration candidate');
+  await button('OK').click();
+  await button('Save Session').click();
+  await button('Resume session').waitFor();
+  await button('History').click();
+  assert.equal(await openDialog().locator('[data-history]').count(),2);
+  page.once('dialog',dialog=>dialog.dismiss());
+  await button('Delete attempt 1').click();
+  assert.equal(await openDialog().locator('[data-history]').count(),2);
+  page.once('dialog',dialog=>dialog.accept());
+  await button('Delete attempt 1').click();
+  await openDialog().locator('[data-history]').nth(1).waitFor({state:'detached'});
+  assert.equal(await openDialog().locator('[data-history]').count(),1);
+  page.once('dialog',dialog=>dialog.accept());
+  await button('Clear History').click();
+  await openDialog().getByText('No completed exams yet.').waitFor();
+  await button('Cancel').click();
+  await page.reload();
+  await button('Resume session').waitFor();
+  assert.equal(await page.locator('.library tbody tr').count(),1);
+  await button('History').click();
+  await openDialog().getByText('No completed exams yet.').waitFor();
+  assert.deepEqual(errors,[]);
+  await context.close();
+ }
+ console.log('PASS: desktop and phone migration, annotations, Navigator and Section Review, timed resume, two confirmations, marked review and isolated history deletion.');
+}finally{await browser.close()}
