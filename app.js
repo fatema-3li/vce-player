@@ -1,11 +1,11 @@
-import {openCalculator} from './calculator.js?v=exam-workflow-20261121';
-import {renderMatching,bindMatching} from './matching-ui.js?v=exam-workflow-20261121';
-import {matchingQuestion} from './matching.js?v=exam-workflow-20261121';
-import {renderContent,imageTokens} from './content.js?v=exam-workflow-20261121';
-import {parseVce} from './vce.js?v=exam-workflow-20261121';
-import {score,correct,validateExam,isAnswered} from './engine.js?v=exam-workflow-20261121';
+import {openCalculator} from './calculator.js?v=blue-player-20261121';
+import {renderMatching,bindMatching} from './matching-ui.js?v=blue-player-20261121';
+import {matchingQuestion} from './matching.js?v=blue-player-20261121';
+import {renderContent,imageTokens} from './content.js?v=blue-player-20261121';
+import {parseVce} from './vce.js?v=blue-player-20261121';
+import {score,correct,validateExam,isAnswered} from './engine.js?v=blue-player-20261121';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-import {initializeStorage,read,write} from './storage.js?v=exam-workflow-20261121';
+import {initializeStorage,read,write} from './storage.js?v=blue-player-20261121';
 let exams=[],selected,session=null,view='library',show=false,review=false,filter='all',message='',textSize=100;
 let saving=false;
 const own=(record,key,fallback)=>Object.hasOwn(record,key)?record[key]:fallback;
@@ -142,12 +142,12 @@ function renderExam(){
  frame(toolbar+content,
  `${review?'<button data-action="report">Back to Report</button>':`<button data-action="end" class="exam-end">End Exam</button>${sessionControls()}`}
  <span class="spacer"></span>
- ${paused?'':`<select id="review-filter" aria-label="Review questions">${Object.entries(filterLabels).filter(([key])=>review||key!=='incorrect').map(([key,label])=>`<option value="${key}" ${filter===key?'selected':''}>${label}</option>`).join('')}</select>
- <button data-action="prev" ${session.index===0?'disabled':''}>Previous</button><button data-action="navigator">Navigator</button>
+ ${review?`<select id="review-filter" aria-label="Review questions">${Object.entries(filterLabels).map(([key,label])=>`<option value="${key}" ${filter===key?'selected':''}>${label}</option>`).join('')}</select>`:''}
+ ${paused?'':`<button data-action="prev" ${session.index===0?'disabled':''}>Previous</button><button data-action="navigator">Navigator</button>
  <button data-action="next" ${review&&session.index>=list.length-1?'disabled':''}>${!review&&session.index>=list.length-1?'Section Review':'Next'}</button>`}`);
  bind();
  if(paused)return;
- $('#review-filter').onchange=e=>openFilter(e.target.value);
+ if(review)$('#review-filter').onchange=e=>openFilter(e.target.value);
  if(!q)return;
  $('#mark').onchange=e=>{
   session.marked=e.target.checked?[...session.marked,q.id]:session.marked.filter(id=>id!==q.id);
@@ -161,7 +161,10 @@ function renderExam(){
  },{readOnly:review});
  document.querySelectorAll('[name=answer]').forEach(input=>input.onchange=()=>{
   setAnswer(q.id,[...document.querySelectorAll('[name=answer]:checked')].map(i=>+i.value));
-  if(!visible().includes(q)){filter='all';session.index=session.questions.indexOf(q);$('#review-filter').value=filter}
+  if(!visible().includes(q)){
+   filter='all';session.index=session.questions.indexOf(q);renderExam();
+   $(`[name=answer][value="${input.value}"]`)?.focus();
+  }
  });
  paintAnnotations(q);
 }

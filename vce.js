@@ -1,4 +1,6 @@
-import {matchingQuestion} from './matching.js?v=exam-workflow-20261121';
+import {matchingQuestion} from './matching.js?v=blue-player-20261121';
+import {imageTokens} from './content.js?v=blue-player-20261121';
+import {imageIssue} from './image-integrity.js?v=blue-player-20261121';
 // Format-31 interoperability reader. Field framing documented at
 // https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md
 // Independently implemented; rejects unsupported structures rather than guessing.
@@ -50,6 +52,52 @@ function richText(bytes){
  return result.trim();
 }
 function documents(bytes){const r=new Reader(bytes),docs=[];while(r.pos<bytes.length){if(docs.length>100)fail('Too many VCE document parts.');const {n}=r.header();docs.push(richText(r.take(n)));}return docs;}
+// A repeated case study can carry both damaged and intact copies of a figure.
+// Require matching study text, figure order, and near-identical JPEG bytes.
+function recoverCaseStudyDiagrams(questions){
+ const studies=new Map();
+ for(const q of questions){
+  if(!q.caseStudy)continue;
+  const tokens=imageTokens(q.caseStudy);
+  if(!tokens.length)continue;
+  const key=JSON.stringify([q.caseStudyTitle,q.caseStudy.replaceAll(/\[\[VCE_IMAGE:[^\]]+\]\]/g,'[[FIGURE]]')]);
+  if(!studies.has(key))studies.set(key,[]);
+  studies.get(key).push({q,tokens});
+ }
+ for(const study of studies.values()){
+  if(study.length<2)continue;
+  const copies=study.map(({tokens})=>tokens.map(token=>{
+   const [mime,encoded]=token.slice(12,-2).split(';base64,');
+   return mime==='image/jpeg'?{bytes:atob(encoded),damaged:Boolean(imageIssue(mime,encoded)),token}:null;
+  }));
+  study.forEach(({q,tokens},index)=>{
+   let position=0;
+   const replacements=tokens.map((token,i)=>{
+    const damaged=copies[index][i];
+    if(!damaged?.damaged)return token;
+    const candidates=new Set(copies.map(images=>images[i]).filter(copy=>
+     copy&&!copy.damaged&&nearIdentical(damaged.bytes,copy.bytes)
+    ).map(copy=>copy.token));
+    return candidates.size===1?[...candidates][0]:token;
+   });
+   for(const [i,token] of tokens.entries()){
+    const at=q.caseStudy.indexOf(token,position);
+    const replacement=replacements[i];
+    if(replacement!==token)q.caseStudy=q.caseStudy.slice(0,at)+replacement+q.caseStudy.slice(at+token.length);
+    position=at+replacement.length;
+   }
+  });
+ }
+}
+function nearIdentical(a,b){
+ if(a.length!==b.length)return false;
+ const maxDifferences=Math.floor(a.length/100);
+ let differences=0;
+ for(let i=0;i<a.length;i++){
+  if(a[i]!==b[i]&&++differences>maxDifferences)return false;
+ }
+ return true;
+}
 export function parseVce(buffer){
  const bytes=buffer instanceof Uint8Array?buffer:new Uint8Array(buffer);
  if(bytes.length>5e6)fail('VCE files must be smaller than 5 MB.');
@@ -81,5 +129,6 @@ export function parseVce(buffer){
   }
  }
  if(bytes.length-r.pos!==12||r.int()!==bytes.length)fail('VCE file length check failed.');
+ recoverCaseStudyDiagrams(questions);
  return {title,number,questions:questions.map(matchingQuestion),sourceFormat:'vce-31',passingScore,timeLimit,fileVersion};
 }

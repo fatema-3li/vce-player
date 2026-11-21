@@ -33,11 +33,16 @@ try{
   const assertFit=async()=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.getByRole('row').filter({hasText:'Legacy practice'}).first().waitFor();
   assert.equal(await page.evaluate(()=>localStorage.getItem('exams')),null);
+  const background=selector=>page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert.equal(await background('.shell > header'),'rgb(0, 102, 174)');
   await page.clock.runFor(30000);
   await resume();
   assert.match(await page.locator('.exam-shell > header').innerText(),/Legacy practice.*Migration candidate/s);
   assert.equal(await page.locator('#clock').innerText(),'Time Remaining: 0:01:40');
-  assert.equal(await page.locator('#review-filter').inputValue(),'marked');
+  assert.equal(await page.locator('#review-filter').count(),0);
+  assert.equal(await background('.exam-toolbar'),'rgb(65, 119, 193)');
+  assert.equal(await background('.exam-shell .footer'),'rgb(0, 102, 174)');
+  assert.match(await page.locator('.question-tools').innerText(),/Item 1 of 1/);
   assert.equal(await page.locator('[name=answer][value="0"]').isChecked(),true);
   assert.equal(await page.getByRole('button',{name:'Reset text size'}).innerText(),'130%');
   await button('Comment').click();
@@ -90,6 +95,7 @@ try{
   await button('Continue').click();
   await button('Submit Exam').click();
   await page.locator('.report').waitFor();
+  assert.equal(await background('.shell > header'),'rgb(0, 102, 174)');
   assert.match(await page.locator('.report').innerText(),/Your score: 500\/1000/);
   await button('View Marked').click();
   assert.match(await page.locator('[data-annotate=prompt]').innerText(),/first/);
@@ -107,6 +113,7 @@ try{
   await button('Resume session').waitFor();
   await button('History').click();
   assert.equal(await openDialog().locator('[data-history]').count(),2);
+  assert.equal(await background('dialog[open] > header'),'rgb(0, 102, 174)');
   page.once('dialog',dialog=>dialog.dismiss());
   await button('Delete attempt 1').click();
   assert.equal(await openDialog().locator('[data-history]').count(),2);
