@@ -1,6 +1,6 @@
 # PMP Homework Platform
 
-A browser-based exam practice player inspired by the supplied desktop screenshots. No external dependencies or accounts are required.
+A browser-based exam practice player inspired by the supplied desktop screenshots. English practice runs entirely in the browser. On-demand Arabic translation uses an optional Cloud Run service.
 
 ## Run
 
@@ -12,7 +12,7 @@ npm test
 npm start
 ```
 
-The server listens on port 3000. Open the app in a browser. Add your exam, select it, and click Start to configure your candidate name, question selection, training mode, and timer.
+The server listens on port 3000. Open the app in a browser. Add your exam, select it, and click Start to enter your name. Use Exam settings in the library to change question selection, training mode, or the default 1,000-minute countdown.
 
 Features include single/multiple-choice questions, section/count/range selection, marking, pause, local session save/resume, answer explanations in every exam mode, automatic submission at timeout, scores out of 1000 (700 to pass by default; native VCE threshold retained), section breakdowns, filtered review and retakes, history, and printable reports. Browser local storage retains exams, sessions, and up to 50 reports. Data stays in the current browser; clearing browser data deletes it. The timer runs while the page is open and unpaused; this is a practice tool, not a proctored exam system.
 
@@ -72,3 +72,7 @@ Risk and Governance compatibility: observed RichView list-item controls (`-11 0 
 Diagram integrity follow-up: browser image load/naturalWidth was insufficient validation: Risk question 87’s extracted PNG has invalid IDAT CRCs, and the two case-study JPEGs shared by questions 77/78 contain invalid JPEG markers. Independent Python field decoding produced identical bytes. These damaged diagrams cannot be reliably reconstructed from the current extraction. PNG chunk CRCs and JPEG segment framing are now checked before default display; damaged data is flagged, with the original extracted image retained behind an explicit preview disclosure. Healthy images keep the full-resolution viewer. Case-study figures are also included alongside the question so referenced report diagrams are discoverable without opening the case-study dialog. Proper restoration requires a working source image; no chart values are invented.
 
 Common UTF-8-as-Windows-1252 mojibake sequences are repaired conservatively at render time, including Risk question 75’s quotation marks. Ordinary Unicode and HTML escaping are preserved. Rendering changes apply to existing imported exams and saved sessions without reimporting. `scripts/risk-display-regression.mjs` checks corrected punctuation, inline case-study figure locations and explicit corruption warnings. `scripts/rich-content-regression.mjs` now asserts integrity warnings instead of considering partial browser decoding a success.
+
+## Arabic translation
+
+In exams and question review, **العربية / English** switches the displayed question content. English stays available while Arabic loads or if translation fails. See [translation service setup](translation-server/README.md) for deployment, privacy, glossary, and pricing. Embedded diagram text requires separate OCR or image translation.

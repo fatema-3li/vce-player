@@ -89,10 +89,6 @@
 .exam-dialog > header {font-weight:650}
 .navigator-dialog .exam-table-scroll {max-height:55vh}
 .end-dialog {max-width:440px}
-.comment-field {display:grid;gap:8px}
-.comment-field textarea {width:100%;resize:vertical;padding:10px;font:inherit}
-.annotation-highlight {background:#ffec8b}
-.annotation-strike {text-decoration:line-through}
 @media (max-width:700px) {
  .exam-shell {min-height:100dvh}
  .exam-shell > header,.exam-toolbar,.exam-shell .footer {padding-left:12px;padding-right:12px}
@@ -104,3 +100,15 @@
  .navigator-dialog form {padding:10px}
  .exam-shell .question {min-height:0}
 }
+
+.candidate-entry {display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-block:0 12px}
+.candidate-entry input {max-width:100%;padding:6px;font:inherit}
+.translation-status {margin-block:0 8px;overflow-wrap:anywhere}
+.translation-status:empty {display:none}
+[data-translate][dir="rtl"],[data-card-label][dir="rtl"],[data-match-label][dir="rtl"] {unicode-bidi:isolate;overflow-wrap:anywhere}
+[data-translate][dir="rtl"] {text-align:start}
+.option [data-translate][dir="rtl"] {display:block}
+#exam-settings {margin-block:0 12px}
+#exam-settings summary {cursor:pointer;width:max-content}
+#exam-settings form {max-width:650px;padding-block:8px}
+.option [data-translate][dir="rtl"] {flex:1}

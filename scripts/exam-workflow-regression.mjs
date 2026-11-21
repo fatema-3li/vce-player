@@ -44,32 +44,13 @@ try{
   assert.equal(await background('.exam-shell .footer'),'rgb(0, 102, 174)');
   assert.match(await page.locator('.question-tools').innerText(),/Item 1 of 1/);
   assert.equal(await page.locator('[name=answer][value="0"]').isChecked(),true);
-  assert.equal(await page.getByRole('button',{name:'Reset text size'}).innerText(),'130%');
-  await button('Comment').click();
-  await page.getByRole('textbox',{name:'Comment'}).fill('Check this wording');
-  await button('Save').click();
-  async function selectText(selector,length){
-   await page.locator(selector).evaluate((el,length)=>{
-    const range=document.createRange();
-    range.setStart(el.firstChild,0);
-    range.setEnd(el.firstChild,length);
-    const selection=getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-   },length);
-  }
-  await selectText('[data-annotate=prompt]',6);
-  await button('Highlight').click();
-  assert.equal(await page.locator('.annotation-highlight').innerText(),'Select');
-  await selectText('[data-annotate=option-1]',5);
-  await button('Strikethrough').click();
-  assert.equal(await page.locator('.annotation-strike').innerText(),'Other');
-  assert.equal(await page.locator('[name=answer][value="0"]').isChecked(),true);
+  assert.equal(await page.getByRole('button',{name:'Reset text size'}).innerText(),'Zoom 130%');
+  for(const name of ['Comment','Highlight','Strikethrough'])assert.equal(await button(name).count(),0);
   await button('Navigator').click();
-  assert.match(await openDialog().getByRole('row').filter({hasText:'Question 1'}).innerText(),/Complete\s+Yes\s+Yes/);
+  assert.match(await openDialog().getByRole('row').filter({hasText:'Question 1'}).innerText(),/Complete\s+Yes/);
   assert.match(await openDialog().getByRole('row').filter({hasText:'Question 2'}).innerText(),/Unseen/);
   await button('Question 2').click();
-  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/other/);
+  assert.match(await page.locator('[data-translate=prompt]').innerText(),/other/);
   await button('Section Review').click();
   await button('Flagged (1)').click();
   assert.equal(await page.locator('.section-review tbody tr').count(),1);
@@ -83,8 +64,6 @@ try{
   assert.equal(await button('Flagged (1)').getAttribute('aria-pressed'),'true');
   await assertFit();
   await button('Question 1').click();
-  assert.equal(await page.locator('.annotation-highlight').innerText(),'Select');
-  assert.equal(await page.locator('.annotation-strike').innerText(),'Other');
   await button('End Exam').click();
   await button('Cancel').click();
   await button('End Exam').click();
@@ -98,12 +77,12 @@ try{
   assert.equal(await background('.shell > header'),'rgb(0, 102, 174)');
   assert.match(await page.locator('.report').innerText(),/Your score: 500\/1000/);
   await button('View Marked').click();
-  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/first/);
+  assert.match(await page.locator('[data-translate=prompt]').innerText(),/first/);
   assert.equal(await page.locator('#review-filter').inputValue(),'marked');
   await page.selectOption('#review-filter','incorrect');
-  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/other/);
+  assert.match(await page.locator('[data-translate=prompt]').innerText(),/other/);
   await page.selectOption('#review-filter','incomplete');
-  assert.match(await page.locator('[data-annotate=prompt]').innerText(),/other/);
+  assert.match(await page.locator('[data-translate=prompt]').innerText(),/other/);
   await button('Back to Report').click();
   await button('Exit').click();
   await button('Start…').click();
@@ -133,5 +112,5 @@ try{
   assert.deepEqual(errors,[]);
   await context.close();
  }
- console.log('PASS: desktop and phone migration, annotations, Navigator and Section Review, timed resume, two confirmations, marked review and isolated history deletion.');
+ console.log('PASS: desktop and phone migration, Navigator and Section Review, timed resume, two confirmations, marked review and isolated history deletion.');
 }finally{await browser.close()}

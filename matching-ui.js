@@ -1,6 +1,6 @@
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderMatching(q,answers=[],{reveal=false,readOnly=false}={}){
- return `<div class="matching-options"><p class="muted" data-match-status aria-live="polite">${readOnly?'Your saved matches.':'Drag a ceremony card onto a subject, or tap a card and then a target. Cards can be reused.'}</p>${readOnly?'':`<div class="match-bank" aria-label="Ceremony cards">${q.options.map((o,i)=>`<button type="button" class="match-card" data-card="${i}" aria-pressed="false">⠿ ${escape(o)}</button>`).join('')}</div>`}${q.matchingPrompts.map((left,i)=>`<div class="matching-row"><span>${escape(left)}</span><div><button type="button" class="match-target" data-match="${i}" data-value="${answers[i]??-1}" aria-label="Match: ${escape(left)}" ${readOnly?'disabled':''}>${escape(q.options[answers[i]]??'Drop a card here')}</button>${!readOnly&&answers[i]>=0?`<button type="button" class="match-clear" data-clear-match="${i}" aria-label="Clear match: ${escape(left)}">Clear</button>`:''}</div>${reveal?`<span class="right">Correct match: ${escape(q.options[q.answers[i]])}</span>`:''}</div>`).join('')}</div>`;
+ return `<div class="matching-options"><p class="muted" data-match-status aria-live="polite">${readOnly?'Your saved matches.':'Drag a ceremony card onto a subject, or tap a card and then a target. Cards can be reused.'}</p>${readOnly?'':`<div class="match-bank" aria-label="Ceremony cards">${q.options.map((o,i)=>`<button type="button" class="match-card" data-card="${i}" aria-pressed="false">⠿ <span data-card-label="${i}">${escape(o)}</span></button>`).join('')}</div>`}${q.matchingPrompts.map((left,i)=>`<div class="matching-row"><span data-match-label="${i}">${escape(left)}</span><div><button type="button" class="match-target" data-match="${i}" data-value="${answers[i]??-1}" aria-label="Match: ${escape(left)}" ${readOnly?'disabled':''}>${answers[i]>=0?`<span data-card-label="${answers[i]}">${escape(q.options[answers[i]])}</span>`:'Drop a card here'}</button>${!readOnly&&answers[i]>=0?`<button type="button" class="match-clear" data-clear-match="${i}" aria-label="Clear match: ${escape(left)}">Clear</button>`:''}</div>${reveal?`<span class="right">Correct match: <span data-card-label="${q.answers[i]}">${escape(q.options[q.answers[i]])}</span></span>`:''}</div>`).join('')}</div>`;
 }
 export function bindMatching(q,answers,onChange,{readOnly=false}={}){
  if(readOnly)return;
@@ -18,9 +18,9 @@ export function bindMatching(q,answers,onChange,{readOnly=false}={}){
    if(suppressClick){suppressClick=false;return;}
    selected=+card.dataset.card;
    document.querySelectorAll('[data-card]').forEach(c=>c.setAttribute('aria-pressed',String(c===card)));
-   status.textContent=`${q.options[selected]} selected. Tap a target to place it.`;
+   status.textContent=`${card.querySelector('[data-card-label]').textContent} selected. Tap a target to place it.`;
   };
-  function highlight(){
+  function indicateTarget(){
    document.querySelectorAll('.match-over').forEach(e=>e.classList.remove('match-over'));
    const target=document.elementFromPoint(drag.x,drag.y)?.closest('[data-match]');
    if(target&&!target.disabled)target.classList.add('match-over');
@@ -29,7 +29,7 @@ export function bindMatching(q,answers,onChange,{readOnly=false}={}){
   function tick(){
    if(!drag?.ghost)return;
    const step=drag.y<65?-12:drag.y>innerHeight-65?12:0;
-   if(step){window.scrollBy(0,step);highlight();}
+   if(step){window.scrollBy(0,step);indicateTarget();}
    drag.frame=requestAnimationFrame(tick);
   }
   function cleanup(){
@@ -45,13 +45,13 @@ export function bindMatching(q,answers,onChange,{readOnly=false}={}){
    if(!drag||e.pointerId!==drag.id)return;
    drag.x=e.clientX;drag.y=e.clientY;
    if(!drag.ghost&&Math.hypot(drag.x-drag.startX,drag.y-drag.startY)>8){
-    const ghost=document.createElement('div');ghost.className='match-ghost';ghost.textContent=q.options[+card.dataset.card];document.body.append(ghost);drag.ghost=ghost;drag.frame=requestAnimationFrame(tick);
+    const ghost=document.createElement('div');ghost.className='match-ghost';ghost.textContent=card.querySelector('[data-card-label]').textContent;ghost.dir='auto';document.body.append(ghost);drag.ghost=ghost;drag.frame=requestAnimationFrame(tick);
    }
-   if(drag.ghost){drag.ghost.style.left=`${drag.x}px`;drag.ghost.style.top=`${drag.y}px`;highlight();}
+   if(drag.ghost){drag.ghost.style.left=`${drag.x}px`;drag.ghost.style.top=`${drag.y}px`;indicateTarget();}
   };
   card.onpointerup=e=>{
    if(!drag||e.pointerId!==drag.id)return;
-   const moved=!!drag.ghost,target=moved?highlight():null;cleanup();
+   const moved=!!drag.ghost,target=moved?indicateTarget():null;cleanup();
    if(moved){suppressClick=true;e.preventDefault();if(target&&!target.disabled)apply(+target.dataset.match,+card.dataset.card);}
   };
   card.onpointercancel=cleanup;card.onlostpointercapture=cleanup;

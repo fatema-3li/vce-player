@@ -6,7 +6,7 @@ try{
   if(!process.env[key])throw Error(`Set ${key} to the private fixture.`);await page.locator('#import').setInputFiles(process.env[key]);await page.getByRole('row').filter({hasText:title}).waitFor();
  }
  assert.deepEqual(alerts,[]);await page.reload();assert.equal(await page.locator('[data-select]').count(),2);await page.getByRole('row').filter({hasText:'09 Risk 2027'}).click();
- await page.getByRole('button',{name:'Start…',exact:true}).click();await page.locator('[name=candidate]').fill('Risk check');await page.locator('[name=mode][value=range]').check();await page.locator('[name=from]').fill('77');await page.locator('[name=to]').fill('78');await page.getByRole('button',{name:'OK',exact:true}).click();
+ await page.locator('#exam-settings summary').click();await page.locator('[name=mode][value=range]').check();await page.locator('[name=from]').fill('77');await page.locator('[name=to]').fill('78');await page.getByRole('button',{name:'Start…',exact:true}).click();await page.locator('[name=candidate]').fill('Risk check');await page.getByRole('button',{name:'OK',exact:true}).click();
  await page.getByRole('button',{name:'View Case Study',exact:true}).click();assert.match(await page.locator('.case-study').innerText(),/• Monthly, multi-functional risk sessions/);assert.equal(await page.locator('dialog .exam-image').count(),2);
  assert.equal(await page.locator('dialog .diagram-warning').count(),2);
  await page.getByRole('button',{name:'Close',exact:true}).click();await page.locator('[name=answer][value="0"]').check();await page.getByRole('button',{name:'Show Answer',exact:true}).click();assert.match(await page.locator('.explanation').innerText(),/Answer: A/);await page.getByRole('button',{name:'Save Session',exact:true}).click();
