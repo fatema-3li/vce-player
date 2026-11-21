@@ -1,4 +1,4 @@
-# VCE Player
+# PMP Homework Platform
 
 A browser-based exam practice player inspired by the supplied desktop screenshots. No external dependencies or accounts are required.
 

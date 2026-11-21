@@ -1,11 +1,11 @@
-import {openCalculator} from './calculator.js?v=blue-player-20261121';
-import {renderMatching,bindMatching} from './matching-ui.js?v=blue-player-20261121';
-import {matchingQuestion} from './matching.js?v=blue-player-20261121';
-import {renderContent,imageTokens} from './content.js?v=blue-player-20261121';
-import {parseVce} from './vce.js?v=blue-player-20261121';
-import {score,correct,validateExam,isAnswered} from './engine.js?v=blue-player-20261121';
+import {openCalculator} from './calculator.js?v=pmp-homework-20261121';
+import {renderMatching,bindMatching} from './matching-ui.js?v=pmp-homework-20261121';
+import {matchingQuestion} from './matching.js?v=pmp-homework-20261121';
+import {renderContent,imageTokens} from './content.js?v=pmp-homework-20261121';
+import {parseVce} from './vce.js?v=pmp-homework-20261121';
+import {score,correct,validateExam,isAnswered} from './engine.js?v=pmp-homework-20261121';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-import {initializeStorage,read,write} from './storage.js?v=blue-player-20261121';
+import {initializeStorage,read,write} from './storage.js?v=pmp-homework-20261121';
 let exams=[],selected,session=null,view='library',show=false,review=false,filter='all',message='',textSize=100;
 let saving=false;
 const own=(record,key,fallback)=>Object.hasOwn(record,key)?record[key]:fallback;
@@ -20,7 +20,7 @@ function applyTextSize(){document.documentElement.style.setProperty('--exam-text
 function textTools(){return `<div class="text-tools" role="group" aria-label="Text size"><button data-action="text-smaller" aria-label="Decrease text size" ${textSize===100?'disabled':''}>A−</button><button data-action="text-reset" aria-label="Reset text size">${textSize}%</button><button data-action="text-larger" aria-label="Increase text size" ${textSize===200?'disabled':''}>A+</button></div>`;}
 const passing=e=>Number.isInteger(e.passingScore)&&e.passingScore>=0&&e.passingScore<=1000?e.passingScore:700;
 const exam=()=>exams.find(e=>e.id===selected), fmt=n=>`${Math.floor(n/3600)}:${String(Math.floor(n/60)%60).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
-function frame(body,foot='',status=''){ $('#app').innerHTML=`<main class="shell ${['exam','section'].includes(view)?'exam-shell':''}"><header>${['exam','section'].includes(view)?`<span>${esc(session.exam.title)} <span class="candidate">· ${esc(session.candidate)}</span></span><span id="clock">${review?'':clock()}</span>`:`<span class="icon">P</span><span>${esc(session&&view!=='library'?session.exam.title+' – Exam A – ': '')}VCE Player</span>`}</header>${body}${status?`<div class="status">${status}</div>`:''}${foot?`<div class="footer">${foot}</div>`:''}</main>`; }
+function frame(body,foot='',status=''){ $('#app').innerHTML=`<main class="shell ${['exam','section'].includes(view)?'exam-shell':''}"><header>${['exam','section'].includes(view)?`<span>${esc(session.exam.title)} <span class="candidate">· ${esc(session.candidate)}</span></span><span id="clock">${review?'':clock()}</span>`:`<span class="icon">P</span><span>${esc(session&&view!=='library'?session.exam.title+' – Exam A – ': '')}PMP Homework Platform</span>`}</header>${body}${status?`<div class="status">${status}</div>`:''}${foot?`<div class="footer">${foot}</div>`:''}</main>`; }
 function library(){session=null;view='library';frame(`<div class="strip app-toolbar"><span class="muted">Your personal exam practice library</span><span class="spacer"></span>${textTools()}</div><div class="content">${savedSessionsTable()}<div class="library"><table><thead><tr><th>Title</th><th>File name</th><th>Questions</th></tr></thead><tbody>${exams.map(e=>`<tr tabindex="0" data-select="${esc(e.id)}" class="${e.id===selected?'selected':''}"><td>▣ &nbsp;${esc(e.number||'')} ${esc(e.title)}</td><td class="muted">${esc(e.title)}.json</td><td>${e.questions.length}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="primary" data-action="setup" ${exam()?'':'disabled'}>Start…</button><button data-action="import">Add…</button><button data-action="remove" ${exam()?'':'disabled'}>Remove</button><button data-action="properties" ${exam()?'':'disabled'}>Properties</button><button data-action="history">History</button><button data-action="refresh-app">Refresh app</button></div></div>${exams.length?'':'<p class="empty">Add your VCE exam to begin.</p>'}</div><div class="notice">Import .vce format 3.1 exams with text choices, or JSON exams. Unsupported VCE versions and question types are reported.</div>`, '', `${esc(message)} Select an exam and click Start. Progress and scores are stored in this browser.`);bind();}
 function savedSessionsTable(){
  const saved=read('session',null);
