@@ -1,6 +1,6 @@
 # PMP Homework Platform
 
-A browser-based exam practice player inspired by the supplied desktop screenshots. English practice runs entirely in the browser. On-demand Arabic translation uses an optional Cloud Run service.
+A browser-based exam practice player inspired by the supplied desktop screenshots. English practice and on-demand Arabic translation run in the browser.
 
 ## Run
 
@@ -75,4 +75,10 @@ Common UTF-8-as-Windows-1252 mojibake sequences are repaired conservatively at r
 
 ## Arabic translation
 
-In exams and question review, **العربية / English** switches the displayed question content. English stays available while Arabic loads or if translation fails. See [translation service setup](translation-server/README.md) for deployment, privacy, glossary, and pricing. Embedded diagram text requires separate OCR or image translation.
+In exams, question review, and the case-study dialog, **العربية / English** switches the displayed exam text. English stays visible while Arabic loads. Use **Continue in English** to stop the translation, or switch back at any time. Answer keys, matching placements, and scoring use the same original exam data in both languages.
+
+The first machine translation downloads about **118 MB** of model and tokenizer files from Hugging Face, including its file CDN, and about **23 MB** of Transformers.js and WebAssembly from jsDelivr before HTTP compression. These hosts receive normal asset requests. Exam text is processed in a browser worker and stays on the device. The model is the pinned q8 ONNX export of Helsinki-NLP's Apache-2.0 OPUS-MT model. It needs no API key, subscription, or server. The app uses its existing GitHub Pages hosting.
+
+Recent translations are cached in the app's IndexedDB storage with a limit of 500 text sections or about 350,000 serialized characters. Edits to English text use a different cache entry. Cached translations remain available offline in an open app. New offline translations require the model and runtime to be available in the current worker or browser caches. The browser can evict model assets or require another download. A fresh app load offline is not guaranteed.
+
+Machine translation can produce awkward wording or change meaning. Common project-management terms use fixed Arabic translations where available. Some passages stay in English when checks detect missing counts, numbers, negation, names, answer references, or formulas. These checks do not guarantee equivalence. Switch back to verify uncertain wording against the original. Diagram labels embedded in images require a separate OCR and translation feature.

@@ -1,12 +1,12 @@
-import {applyTranslation,languageButton,toggleLanguage} from './translation.js?v=arabic-20261121';
-import {openCalculator} from './calculator.js?v=arabic-20261121';
-import {renderMatching,bindMatching} from './matching-ui.js?v=arabic-20261121';
-import {matchingQuestion} from './matching.js?v=arabic-20261121';
-import {renderContent,imageTokens} from './content.js?v=arabic-20261121';
-import {parseVce} from './vce.js?v=arabic-20261121';
-import {score,correct,validateExam,isAnswered} from './engine.js?v=arabic-20261121';
+import {applyTranslation,languageButton,toggleLanguage} from './translation.js?v=local-arabic-20261122';
+import {openCalculator} from './calculator.js?v=local-arabic-20261122';
+import {renderMatching,bindMatching} from './matching-ui.js?v=local-arabic-20261122';
+import {matchingQuestion} from './matching.js?v=local-arabic-20261122';
+import {renderContent,imageTokens} from './content.js?v=local-arabic-20261122';
+import {parseVce} from './vce.js?v=local-arabic-20261122';
+import {score,correct,validateExam,isAnswered} from './engine.js?v=local-arabic-20261122';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-import {initializeStorage,read,write} from './storage.js?v=arabic-20261121';
+import {initializeStorage,read,write} from './storage.js?v=local-arabic-20261122';
 let exams=[],selected,session=null,view='library',show=false,review=false,filter='all',message='',textSize=100;
 let saving=false;
 let optionsOpen=false;
@@ -347,9 +347,15 @@ async function action(a){
  case 'case-study':{
   const q=visible()[session.index];
   if(!q?.caseStudy?.trim())break;
-  const d=modal(q.caseStudyTitle||'Case Study',`<div class="translation-status" data-translation-status role="status"></div><div class="case-study" data-translate="caseStudy">${renderContent(q.caseStudy)}</div>`);
+  const d=modal(q.caseStudyTitle||'Case Study',`${languageButton(false)}<div class="translation-status" data-translation-status role="status"></div><div class="case-study" data-translate="caseStudy">${renderContent(q.caseStudy)}</div>`);
   d.querySelector('header').dataset.translate='caseStudyTitle';
-  applyTranslation(d,{caseStudyTitle:q.caseStudyTitle||'Case Study',caseStudy:q.caseStudy},bind);
+  const translateCase=()=>applyTranslation(d,{caseStudyTitle:q.caseStudyTitle||'Case Study',caseStudy:q.caseStudy},bind,()=>translateQuestion(q));
+  d.querySelector('[data-translation-toggle]').onclick=()=>{
+   toggleLanguage();
+   translateCase();
+   translateQuestion(q);
+  };
+  translateCase();
   d.querySelector('[data-close]').textContent='Close';
   bind();
   break;

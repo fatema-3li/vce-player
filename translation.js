@@ -1,42 +1,89 @@
-import {imageTokens,renderContent} from './content.js?v=arabic-20261121';
-import {repairEncoding} from './text-encoding.js?v=arabic-20261121';
-import {translationEndpoint} from './translation-config.js?v=arabic-20261121';
+import {imageTokens,renderContent} from './content.js?v=local-arabic-20261122';
+import {repairEncoding} from './text-encoding.js?v=local-arabic-20261122';
+import {read,write} from './storage.js?v=local-arabic-20261122';
 
-const cacheKey='pmp-arabic-translations-v1';
+const cacheKey='browserArabicV1';
 const originals=new WeakMap();
 const active=new WeakMap();
 const pending=new Map();
 let arabic=false;
-let cache;
-try{cache=new Map(JSON.parse(localStorage.getItem(cacheKey)||'[]'))}catch{cache=new Map()}
+let worker,job,ready=false,downloaded=new Map();
 
-export function languageButton(){
- return '<button data-action="language" aria-pressed="false"><bdi lang="ar">العربية</bdi> / English</button>';
-}
-export function toggleLanguage(){arabic=!arabic}
-
-function remember(key,translated){
- cache.set(key,translated);
- while(cache.size>100||JSON.stringify([...cache]).length>350000)cache.delete(cache.keys().next().value);
- try{localStorage.setItem(cacheKey,JSON.stringify([...cache]))}catch{}
+export function languageButton(inExam=true){
+ return `<button type="button" ${inExam?'data-action="language" ':''}data-translation-toggle aria-pressed="false"><bdi lang="ar">العربية</bdi> / English</button>`;
 }
 
-async function translate(texts){
- const bytes=new TextEncoder().encode(JSON.stringify([translationEndpoint,texts]));
- const key=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),byte=>byte.toString(16).padStart(2,'0')).join('');
- if(cache.has(key))return cache.get(key);
+function stopWorker(){
+ worker?.terminate();
+ worker=undefined;
+ ready=false;
+ downloaded=new Map();
+ job?.finish(null,Error('Translation stopped'));
+}
+
+export function toggleLanguage(){
+ arabic=!arabic;
+ if(!arabic)stopWorker();
+}
+
+function workerTranslate(text,onProgress){
+ if(!worker){
+  const url=new URL('./translation-worker.js',import.meta.url);
+  url.search=new URL(import.meta.url).search;
+  worker=new Worker(url,{type:'module'});
+  worker.onmessage=({data})=>{
+   if(data.progress){
+    downloaded.set(data.progress.file,data.progress.loaded);
+    job?.onProgress(`Downloading model · ${Math.min(118,Math.round([...downloaded.values()].reduce((sum,size)=>sum+size,0)/1e6))} of about 118 MB`);
+   }else if(data.ready){
+    ready=true;
+    job?.onProgress('Translating on this device…');
+   }else if(data.error){
+    stopWorker();
+   }else{
+    job?.finish(data.value);
+   }
+  };
+  worker.onerror=stopWorker;
+ }
+ return new Promise((resolve,reject)=>{
+  const timeout=setTimeout(stopWorker,ready?30000:180000);
+  job={onProgress,finish(value,error){
+   clearTimeout(timeout);
+   job=undefined;
+   if(error)reject(error);
+   else resolve(value);
+  }};
+  onProgress(ready?'Translating on this device…':'Loading translation files…');
+  worker.postMessage({text});
+ });
+}
+
+let queue=Promise.resolve();
+async function translate(text,current,onProgress){
+ const key=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),byte=>byte.toString(16).padStart(2,'0')).join('');
+ const cached=read(cacheKey,[]).find(([id])=>id===key);
+ if(cached)return cached[1];
+ if(!current())return;
  if(!pending.has(key)){
-  pending.set(key,(async()=>{
-   const response=await fetch(translationEndpoint,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    credentials:'omit',body:JSON.stringify({texts}),signal:AbortSignal.timeout(20000)
-   });
-   if(!response.ok)throw Error('Translation request failed');
-   const {translations}=await response.json();
-   if(!Array.isArray(translations)||translations.length!==texts.length||translations.some(s=>typeof s!=='string'||!s.trim()||imageTokens(s).length))throw Error('Invalid translation response');
-   remember(key,translations);
-   return translations;
-  })().finally(()=>pending.delete(key)));
+  const task=queue.then(async ()=>{
+   if(!current())return;
+   const translated=await workerTranslate(text,onProgress);
+   if(translated!==undefined){
+    try{
+     await write({[cacheKey]:(entries=[])=>{
+      const next=[...entries.filter(([id])=>id!==key),[key,translated]];
+      while(next.length>500||JSON.stringify(next).length>350000)next.shift();
+      return next;
+     }});
+    }catch{
+     // A storage failure still allows the translation to be displayed.
+    }
+   }
+   return translated;
+  }).finally(()=>pending.delete(key));
+  pending.set(key,task);
+  queue=task.catch(()=>{});
  }
  return pending.get(key);
 }
@@ -47,12 +94,13 @@ function sourceParts(value){
  const result=[];
  let offset=0;
  function appendText(text){
-  // Preserve paragraph breaks and keep each API entry within the provider limit.
+  // Preserve paragraph breaks and split long paragraphs at sentence boundaries.
   for(const line of repairEncoding(text).split(/(\r?\n)/)){
    let remaining=line;
-   while(remaining.length>1600){
-    const space=remaining.lastIndexOf(' ',1600);
-    const end=space>800?space:1600;
+   while(remaining.length>750){
+    const sentence=remaining.slice(0,750).search(/[.!?]\s+[^.!?]*$/);
+    const space=remaining.lastIndexOf(' ',750);
+    const end=sentence>200?sentence+1:space>200?space:750;
     result.push({text:remaining.slice(0,end)});
     remaining=remaining.slice(end);
    }
@@ -69,23 +117,6 @@ function sourceParts(value){
  return result;
 }
 
-async function translateBatches(texts){
- const batches=[];
- let batch=[],size=0;
- for(const text of texts){
-  if(batch.length>=100||size+text.length>8000){
-   batches.push(batch);
-   batch=[];size=0;
-  }
-  batch.push(text);
-  size+=text.length;
- }
- if(batch.length)batches.push(batch);
- const translations=[];
- for(const group of batches)translations.push(...await translate(group));
- return translations;
-}
-
 function fieldsIn(root,fields){
  const elements=new Map();
  root.querySelectorAll('[data-translate],[data-card-label],[data-match-label]').forEach(element=>{
@@ -99,14 +130,14 @@ function fieldsIn(root,fields){
  return elements;
 }
 
-export async function applyTranslation(root,fields,bindImages){
+export async function applyTranslation(root,fields,bindImages,onEnglish){
  const status=root.querySelector('[data-translation-status]');
  if(!status)return;
- const button=root.querySelector('[data-action=language]');
+ const button=root.querySelector('[data-translation-toggle]');
  button?.setAttribute('aria-pressed',String(arabic));
  const request={};
  active.set(root,request);
- const current=()=>active.get(root)===request&&status.isConnected&&arabic;
+ const current=()=>active.get(root)===request&&status.isConnected&&arabic&&(root.tagName!=='DIALOG'||root.open);
  const entries=fieldsIn(root,fields);
  if(!arabic){
   for(const elements of entries.values())for(const element of elements){
@@ -118,27 +149,48 @@ export async function applyTranslation(root,fields,bindImages){
   status.textContent='';
   return;
  }
- if(!translationEndpoint){
-  status.textContent='Arabic translation is awaiting service setup. English is available.';
-  return;
- }
-
- // Cache the question, explanation and case study separately so revealing an
- // explanation or opening a shared case study does not resend question text.
- const groups=Map.groupBy(entries,([field])=>field==='explanation'?'explanation':field.startsWith('caseStudy')?'caseStudy':'question');
- status.textContent='Loading Arabic translation…';
- const results=await Promise.allSettled([...groups.values()].map(async group=>{
-  const texts=[];
-  const segments=group.map(([field,elements])=>[elements,sourceParts(fields[field]).map(({image,text})=>{
-   if(image)return image;
-   if(!text.trim())return text;
-   const [,before,content,after]=text.match(/^(\s*)(.*?)(\s*)$/s);
-   return [before,texts.push(content)-1,after];
-  })]);
-  const translated=await translateBatches(texts);
-  if(!current())return;
-  for(const [elements,segmentsForField] of segments){
-   const value=segmentsForField.map(part=>Array.isArray(part)?part[0]+translated[part[1]]+part[2]:part).join('');
+ const message=document.createElement('span');
+ const cancel=document.createElement('button');
+ cancel.type='button';
+ cancel.textContent='Continue in English';
+ cancel.onclick=()=>{
+  toggleLanguage();
+  applyTranslation(root,fields,bindImages,onEnglish);
+  onEnglish?.();
+ };
+ status.replaceChildren(message,' ',cancel);
+ const segments=[...entries].map(([field,elements])=>[elements,sourceParts(fields[field])]);
+ const total=segments.flatMap(([,parts])=>parts).filter(({text})=>text?.trim()).length;
+ let done=0,partial=false;
+ const progress=value=>{
+  if(current())message.textContent=`${value} ${done}/${total} text sections. Model and runtime files come from Hugging Face and jsDelivr. Exam text stays on this device.`;
+ };
+ progress('Preparing Arabic translation…');
+ try{
+  for(const [elements,parts] of segments){
+   let value='',isArabic=false;
+   for(const {image,text} of parts){
+    if(!current())return;
+    if(image||!text.trim()){value+=image??text;continue}
+    const [,before,content,after]=text.match(/^(\s*)(.*?)(\s*)$/s);
+    let translated=await translate(content,current,progress);
+    if(!current())return;
+    if(translated===undefined){
+     // The owning view can change while a shared request is still queued.
+     translated=await translate(content,current,progress);
+     if(!current())return;
+    }
+    done++;
+    progress('Translating on this device…');
+    if(typeof translated==='string'&&/[\p{Script=Arabic}]/u.test(translated)&&!imageTokens(translated).length){
+     value+=before+translated+after;
+     isArabic=true;
+    }else{
+     value+=before+'\u2066'+content+'\u2069'+after;
+     partial=true;
+    }
+   }
+   if(!isArabic)continue;
    for(const element of elements){
     if(element.hasAttribute('data-translate')&&element.tagName!=='HEADER')element.innerHTML=renderContent(value);
     else element.textContent=value;
@@ -146,16 +198,17 @@ export async function applyTranslation(root,fields,bindImages){
     element.dir='rtl';
    }
   }
- }));
- if(!current())return;
- bindImages?.();
- if(results.every(result=>result.status==='fulfilled'))status.textContent='';
- else{
-  status.textContent='Some content could not be translated and is shown in English. ';
+  if(!current())return;
+  status.replaceChildren(partial?'Some text stayed in English because it could not be translated safely.':'');
+ }catch{
+  if(!current())return;
+  message.textContent='Arabic translation could not be loaded or completed. Check your connection or device storage, then try again. ';
   const retry=document.createElement('button');
   retry.type='button';
   retry.textContent='Retry';
-  retry.onclick=()=>applyTranslation(root,fields,bindImages);
-  status.append(retry);
+  retry.onclick=()=>applyTranslation(root,fields,bindImages,onEnglish);
+  status.append(' ',retry);
+ }finally{
+  if(current())bindImages?.();
  }
 }

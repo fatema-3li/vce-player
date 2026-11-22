@@ -21,14 +21,23 @@ try{
   const mobile=viewport.width<700;
   const context=await browser.newContext({viewport,isMobile:mobile,hasTouch:mobile});
   const page=await context.newPage();
-  await page.route('**/translation-config.js*',route=>route.fulfill({contentType:'text/javascript',body:"export const translationEndpoint='/mock-translation';"}));
-  let requests=[],fail=true;
-  await page.route('**/mock-translation',async route=>{
-   const {texts}=route.request().postDataJSON();
-   requests.push(texts);
-   assert.ok(texts.every(text=>!text.includes('VCE_IMAGE')&&!text.includes('Test candidate')));
-   if(fail&&texts.includes('Fallback question')){await route.fulfill({status:502});return}
-   await route.fulfill({json:{translations:texts.map(text=>translations.get(text.trim()))}});
+  let requests=[];
+  let fail=true;
+  await page.route('**/translation-worker.js*',route=>route.fulfill({
+   contentType:'text/javascript',
+   body:`const translations=new Map(${JSON.stringify([...translations])});
+   self.onmessage=({data:{text}})=>{
+    self.postMessage({ready:true});
+    setTimeout(()=>self.postMessage(text==='Fallback question'&&${fail}?{error:true}:{value:translations.get(text)}),text==='Which sponsor does not approve 10%?'?500:0);
+   };`
+  }));
+  await page.exposeFunction('recordTranslation',text=>requests.push(text));
+  await page.addInitScript(()=>{
+   const postMessage=Worker.prototype.postMessage;
+   Worker.prototype.postMessage=function(data){
+    window.recordTranslation(data.text);
+    return postMessage.call(this,data);
+   };
   });
   const button=name=>page.getByRole('button',{name,exact:true});
   const toggle=()=>button('العربية / English').click();
@@ -48,12 +57,19 @@ try{
   await checked.check();
   await page.locator('#mark').check();
   await toggle();
+  await page.getByText(/Translating on this device/).waitFor();
+  await button('Continue in English').click();
+  assert.equal(await prompt.innerText(),exam.questions[0].prompt);
+  assert.equal(await checked.isChecked(),true);
+  requests=[];
+  await toggle();
   await page.getByText('أي راعٍ لا يوافق على 10%؟',{exact:true}).waitFor();
   assert.equal(await prompt.evaluate(e=>getComputedStyle(e).direction),'rtl');
   assert.equal(await checked.isChecked(),true);
   assert.equal(await page.locator('#mark').isChecked(),true);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  assert.equal(requests.length,1);
+  await page.getByText('الراعي B',{exact:true}).waitFor();
+  assert.deepEqual(requests,['Which sponsor does not approve 10%?','Sponsor A','Sponsor B']);
   await button('Show Answer').click();
   await page.getByText('الخيار B لا يوافق على 10%.',{exact:true}).waitFor();
   assert.match(await page.locator('.explanation b').innerText(),/Answer: B/);
@@ -67,7 +83,7 @@ try{
   assert.equal(await checked.isChecked(),true);
   await toggle();
   await page.getByText('أي راعٍ لا يوافق على 10%؟',{exact:true}).waitFor();
-  assert.equal(requests.length,3);
+  assert.equal(requests.length,6);
   await button('Next').click();
   await page.getByText('طابِق الفعاليات.',{exact:true}).waitFor();
   if(mobile){
@@ -89,7 +105,7 @@ try{
   assert.equal(await prompt.innerText(),exam.questions[1].prompt);
   await toggle();
   await button('Next').click();
-  await page.getByText(/could not be translated/).waitFor();
+  await page.getByText(/could not be loaded or completed/).waitFor();
   assert.equal(await prompt.innerText(),exam.questions[2].prompt);
   fail=false;
   await button('Retry').click();
@@ -120,7 +136,7 @@ try{
   await button('OK').click();
   await toggle();
   await page.getByText('السؤال البديل المحدّث',{exact:true}).waitFor();
-  assert.deepEqual(requests.at(-1),['Updated fallback question','First','Second']);
+  assert.equal(requests.at(-1),'Updated fallback question');
   await context.close();
  }
  console.log('PASS: Arabic and English on desktop and phone, on-demand requests, cache invalidation, retry, matching, scores and saved sessions.');
