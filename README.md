@@ -77,7 +77,9 @@ Common UTF-8-as-Windows-1252 mojibake sequences are repaired conservatively at r
 
 In exams, question review, and the case-study dialog, **العربية / English** switches the displayed exam text. English stays visible while Arabic loads. Use **Continue in English** to stop the translation, or switch back at any time. Answer keys, matching placements, and scoring use the same original exam data in both languages.
 
-The first machine translation downloads about **118 MB** of model and tokenizer files from Hugging Face, including its file CDN, and about **23 MB** of Transformers.js and WebAssembly from jsDelivr before HTTP compression. These hosts receive normal asset requests. Exam text is processed in a browser worker and stays on the device. The model is the pinned q8 ONNX export of Helsinki-NLP's Apache-2.0 OPUS-MT model. It needs no API key, subscription, or server. The app uses its existing GitHub Pages hosting.
+On iPhone and iPad, Arabic mode uses existing cached translations and built-in glossary phrases only. Loading the full browser model closed Safari on a reported iPhone, so this release leaves uncached passages in English on those devices.
+
+The first machine translation on supported devices downloads about **118 MB** of model and tokenizer files from Hugging Face, including its file CDN, and about **23 MB** of Transformers.js and WebAssembly from jsDelivr before HTTP compression. These hosts receive normal asset requests. Exam text is processed in a browser worker and stays on the device. The model is the pinned q8 ONNX export of Helsinki-NLP's Apache-2.0 OPUS-MT model. It needs no API key, subscription, or server. The app uses its existing GitHub Pages hosting.
 
 Recent translations are cached in the app's IndexedDB storage with a limit of 500 text sections or about 350,000 serialized characters. Edits to English text use a different cache entry. Cached translations remain available offline in an open app. New offline translations require the model and runtime to be available in the current worker or browser caches. The browser can evict model assets or require another download. A fresh app load offline is not guaranteed.
 

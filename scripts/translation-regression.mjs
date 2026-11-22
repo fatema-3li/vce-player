@@ -139,5 +139,34 @@ try{
   assert.equal(requests.at(-1),'Updated fallback question');
   await context.close();
  }
+ const iphone=await browser.newContext({
+  viewport:{width:390,height:844},isMobile:true,hasTouch:true,
+  userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1'
+ });
+ const iosPage=await iphone.newPage();
+ const modelRequests=[];
+ iosPage.on('request',request=>{
+  if(/translation-worker\.js|huggingface\.co|cdn\.jsdelivr\.net/.test(request.url()))modelRequests.push(request.url());
+ });
+ await iosPage.goto(url);
+ const iosExam={title:'iPhone translation fixture',questions:[{...exam.questions[0],options:['Risk register','Project charter']}]};
+ await iosPage.locator('#import').setInputFiles({name:'iphone.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(iosExam))});
+ await iosPage.getByRole('row').filter({hasText:iosExam.title}).waitFor();
+ await iosPage.getByRole('button',{name:'Start…',exact:true}).click();
+ await iosPage.getByRole('textbox',{name:'Your name'}).fill('iPhone test');
+ await iosPage.getByRole('button',{name:'OK',exact:true}).click();
+ const answer=iosPage.locator('[name=answer][value="1"]');
+ await answer.check();
+ const language=iosPage.getByRole('button',{name:'العربية / English',exact:true});
+ await language.click();
+ await iosPage.getByText(/Full Arabic translation is paused on iPhone/).waitFor();
+ assert.equal(await iosPage.locator('[data-translate=prompt]').innerText(),iosExam.questions[0].prompt);
+ assert.equal(await iosPage.locator('[data-translate=option-0]').innerText(),'سجل المخاطر');
+ assert.equal(await answer.isChecked(),true);
+ await language.click();
+ assert.equal(await iosPage.locator('[data-translate=option-0]').innerText(),'Risk register');
+ assert.equal(await answer.isChecked(),true);
+ assert.deepEqual(modelRequests,[]);
+ await iphone.close();
  console.log('PASS: Arabic and English on desktop and phone, on-demand requests, cache invalidation, retry, matching, scores and saved sessions.');
 }finally{await browser.close()}

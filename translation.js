@@ -1,11 +1,16 @@
-import {imageTokens,renderContent} from './content.js?v=local-arabic-20261122';
-import {repairEncoding} from './text-encoding.js?v=local-arabic-20261122';
-import {read,write} from './storage.js?v=local-arabic-20261122';
+import {imageTokens,renderContent} from './content.js?v=arabic-ios-recovery-20261122';
+import {repairEncoding} from './text-encoding.js?v=arabic-ios-recovery-20261122';
+import {read,write} from './storage.js?v=arabic-ios-recovery-20261122';
+
+import {translateForExam} from './translation-quality.js?v=arabic-ios-recovery-20261122';
 
 const cacheKey='browserArabicV1';
 const originals=new WeakMap();
 const active=new WeakMap();
 const pending=new Map();
+// iPadOS can request a desktop site and identify itself as a Mac.
+const appleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent)||
+ (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 let arabic=false;
 let worker,job,ready=false,downloaded=new Map();
 
@@ -65,6 +70,7 @@ async function translate(text,current,onProgress){
  const cached=read(cacheKey,[]).find(([id])=>id===key);
  if(cached)return cached[1];
  if(!current())return;
+ if(appleMobile)return translateForExam(text,async ()=>null);
  if(!pending.has(key)){
   const task=queue.then(async ()=>{
    if(!current())return;
@@ -163,7 +169,9 @@ export async function applyTranslation(root,fields,bindImages,onEnglish){
  const total=segments.flatMap(([,parts])=>parts).filter(({text})=>text?.trim()).length;
  let done=0,partial=false;
  const progress=value=>{
-  if(current())message.textContent=`${value} ${done}/${total} text sections. Model and runtime files come from Hugging Face and jsDelivr. Exam text stays on this device.`;
+  if(current())message.textContent=appleMobile
+   ?`Checking cached Arabic and glossary phrases… ${done}/${total} text sections.`
+   :`${value} ${done}/${total} text sections. Model and runtime files come from Hugging Face and jsDelivr. Exam text stays on this device.`;
  };
  progress('Preparing Arabic translation…');
  try{
@@ -199,7 +207,9 @@ export async function applyTranslation(root,fields,bindImages,onEnglish){
    }
   }
   if(!current())return;
-  status.replaceChildren(partial?'Some text stayed in English because it could not be translated safely.':'');
+  status.replaceChildren(partial?(appleMobile
+  ?'Full Arabic translation is paused on iPhone and iPad because the model can close the browser. Cached Arabic and glossary phrases are available. Other text stays in English.'
+  :'Some text stayed in English because it could not be translated safely.'):'');
  }catch{
   if(!current())return;
   message.textContent='Arabic translation could not be loaded or completed. Check your connection or device storage, then try again. ';
