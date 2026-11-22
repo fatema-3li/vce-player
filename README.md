@@ -1,6 +1,6 @@
 # PMP Homework Platform
 
-A browser-based exam practice player inspired by the supplied desktop screenshots. English practice and on-demand Arabic translation run in the browser.
+A browser-based exam practice player inspired by the supplied desktop screenshots. English practice and stored Arabic translations run in the browser.
 
 ## Run
 
@@ -75,12 +75,20 @@ Common UTF-8-as-Windows-1252 mojibake sequences are repaired conservatively at r
 
 ## Arabic translation
 
-In exams, question review, and the case-study dialog, **العربية / English** switches the displayed exam text. English stays visible while Arabic loads. Use **Continue in English** to stop the translation, or switch back at any time. Answer keys, matching placements, and scoring use the same original exam data in both languages.
+Use **Add…** to import a bilingual exam or a translation-memory JSON file. In questions, review, and case studies, **العربية / English** switches between Arabic and the English source. The language preference and imported memory are stored in this browser's IndexedDB. In Arabic mode the status identifies complete, partial, or unavailable Arabic for the text on screen. Exam text stays in the browser. The toggle works in an open page without a connection, model download, or translation API.
 
-On iPhone and iPad, Arabic mode uses existing cached translations and built-in glossary phrases only. Loading the full browser model closed Safari on a reported iPhone, so this release leaves uncached passages in English on those devices.
+### Prepare and update bilingual exams
 
-The first machine translation on supported devices downloads about **118 MB** of model and tokenizer files from Hugging Face, including its file CDN, and about **23 MB** of Transformers.js and WebAssembly from jsDelivr before HTTP compression. These hosts receive normal asset requests. Exam text is processed in a browser worker and stays on the device. The model is the pinned q8 ONNX export of Helsinki-NLP's Apache-2.0 OPUS-MT model. It needs no API key, subscription, or server. The app uses its existing GitHub Pages hosting.
+Run `node scripts/prepare-bilingual.mjs input.vce private-output.json stable-exam-id` for supported VCE or exam JSON. Keep the input and output outside the web root. The script uses the player's VCE reader and the same existing conversion of explicit matching pairs. For questions converted from legacy matching pairs, it also retains the original question record. It initializes one translation slot per nonblank text block and preserves the answer indexes used by the player. Keep the stable exam `sourceId` and question `id` values when updating translations. The app's library ID is assigned independently.
 
-Recent translations are cached in the app's IndexedDB storage with a limit of 500 text sections or about 350,000 serialized characters. Edits to English text use a different cache entry. Cached translations remain available offline in an open app. New offline translations require the model and runtime to be available in the current worker or browser caches. The browser can evict model assets or require another download. A fresh app load offline is not guaranteed.
+Each question can contain `translation: {version: 1, fields: {…}}`. Fields are `prompt`, `section`, `explanation`, `caseStudyTitle`, `caseStudy`, `option-0`, `option-1`, and so on, plus `match-0`, `match-1`, and so on for matching subjects. Each field has a lowercase SHA-256 `sourceHash` of the original UTF-8 field and a `segments` array. In order, each slot corresponds to trimmed text between line breaks or diagram tokens. Leave missing translations as `null`, or supply an object such as `{"ar":"اختر أفضل إجابة.","status":"verified"}`. Mark unresolved wording with `"status":"needs-review"` and optionally retain a `note`. A draft Arabic field is optional for that status. Flag source defects separately. Embedded pictures remain in place. Labels drawn into an image need separate OCR or transcription, followed by translation. Damaged or missing figures require a readable source. For complex formulas, isolate the LTR expression with Unicode LRI (U+2066) and PDI (U+2069).
 
-Machine translation can produce awkward wording or change meaning. Common project-management terms use fixed Arabic translations where available. Some passages stay in English when checks detect missing counts, numbers, negation, names, answer references, or formulas. These checks do not guarantee equivalence. Switch back to verify uncertain wording against the original. Diagram labels embedded in images require a separate OCR and translation feature.
+### Reuse and revise translations
+
+An imported bilingual exam adds its translated segments to local memory. **Properties → Export translation memory** downloads a private backup. A memory file has `format: "pmp-translation-memory-v1"`, a `segments` array, and a `glossary` array of `{en, ar}` terms. Each memory segment includes `role`, `en`, `ar`, and `status`. Roles match exam field names except that choices use `option` and matching subjects use `matchingSubject`. An optional `scope` contains `examId`, `questionId`, `field`, `sourceHash`, and zero-based `index`.
+
+The current verified scoped record takes precedence. For other questions, the player can reuse an unambiguous exact match in the same field role. Set `reusable: true` on verified sentences that can also be reused within longer passages, or `reusable: false` to restrict a segment to its scope. English remains visible when no suitable verified match exists. The glossary is a reference for preparing and reviewing translations. It is never used to substitute individual words in the player.
+
+To correct an existing translation, export the memory, copy the relevant record with its existing scope, edit the Arabic and status, and import the correction. Import retains prior revisions and uses the latest distinct scoped record. Import vocabulary updates using the same memory format. Keep backups of private exam and memory files outside the public repository.
+
+Run `scripts/translation-regression.mjs` with Playwright and the app running locally to check both layouts, offline display, partial reuse, review, and session state.

@@ -1,4 +1,4 @@
-const keys = ['exams', 'history', 'session', 'candidate', 'textSize', 'browserArabicV1'];
+const keys = ['exams', 'history', 'session', 'candidate', 'textSize', 'browserArabicV1', 'translationMemory', 'examLanguage'];
 const collections = new Set(['exams', 'history']);
 const values = new Map();
 let database;

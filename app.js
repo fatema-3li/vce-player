@@ -1,12 +1,13 @@
-import {applyTranslation,languageButton,toggleLanguage} from './translation.js?v=arabic-ios-recovery-20261122';
-import {openCalculator} from './calculator.js?v=arabic-ios-recovery-20261122';
-import {renderMatching,bindMatching} from './matching-ui.js?v=arabic-ios-recovery-20261122';
-import {matchingQuestion} from './matching.js?v=arabic-ios-recovery-20261122';
-import {renderContent,imageTokens} from './content.js?v=arabic-ios-recovery-20261122';
-import {parseVce} from './vce.js?v=arabic-ios-recovery-20261122';
-import {score,correct,validateExam,isAnswered} from './engine.js?v=arabic-ios-recovery-20261122';
+import {examSegments, memoryFormat, mergeMemory, questionFields, validateMemory} from './translation-data.js?v=stored-arabic-v1';
+import {applyTranslation,languageButton,toggleLanguage,restoreLanguage} from './translation.js?v=stored-arabic-v1';
+import {openCalculator} from './calculator.js?v=stored-arabic-v1';
+import {renderMatching,bindMatching} from './matching-ui.js?v=stored-arabic-v1';
+import {matchingQuestion} from './matching.js?v=stored-arabic-v1';
+import {renderContent,imageTokens} from './content.js?v=stored-arabic-v1';
+import {parseVce} from './vce.js?v=stored-arabic-v1';
+import {score,correct,validateExam,isAnswered} from './engine.js?v=stored-arabic-v1';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-import {initializeStorage,read,write} from './storage.js?v=arabic-ios-recovery-20261122';
+import {initializeStorage,read,write} from './storage.js?v=stored-arabic-v1';
 let exams=[],selected,session=null,view='library',show=false,review=false,filter='all',message='',textSize=100;
 let saving=false;
 let optionsOpen=false;
@@ -23,7 +24,7 @@ function textTools(){return `<div class="text-tools" role="group" aria-label="Te
 const passing=e=>Number.isInteger(e.passingScore)&&e.passingScore>=0&&e.passingScore<=1000?e.passingScore:700;
 const exam=()=>exams.find(e=>e.id===selected), fmt=n=>`${Math.floor(n/3600)}:${String(Math.floor(n/60)%60).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
 function frame(body,foot='',status=''){ $('#app').innerHTML=`<main class="shell ${['exam','section'].includes(view)?'exam-shell':''}"><header>${['exam','section'].includes(view)?`<span>${esc(session.exam.title)} <span class="candidate">· ${esc(session.candidate)}</span></span><span id="clock">${review?'':clock()}</span>`:`<span class="icon">P</span><span>${esc(session&&view!=='library'?session.exam.title+' – Exam A – ': '')}PMP Homework Platform</span>`}</header>${body}${status?`<div class="status">${status}</div>`:''}${foot?`<div class="footer">${foot}</div>`:''}</main>`; }
-function library(){session=null;view='library';frame(`<div class="strip app-toolbar"><span class="muted">Your personal exam practice library</span><span class="spacer"></span>${textTools()}</div><div class="content">${savedSessionsTable()}${examSettings()}<div class="library"><table><thead><tr><th>Title</th><th>File name</th><th>Questions</th></tr></thead><tbody>${exams.map(e=>`<tr tabindex="0" data-select="${esc(e.id)}" class="${e.id===selected?'selected':''}"><td>▣ &nbsp;${esc(e.number||'')} ${esc(e.title)}</td><td class="muted">${esc(e.title)}.json</td><td>${e.questions.length}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="primary" data-action="setup" ${exam()?'':'disabled'}>Start…</button><button data-action="import">Add…</button><button data-action="remove" ${exam()?'':'disabled'}>Remove</button><button data-action="properties" ${exam()?'':'disabled'}>Properties</button><button data-action="history">History</button><button data-action="refresh-app">Refresh app</button></div></div>${exams.length?'':'<p class="empty">Add your VCE exam to begin.</p>'}</div><div class="notice">Import .vce format 3.1 exams with text choices, or JSON exams. Unsupported VCE versions and question types are reported.</div>`, '', `${esc(message)} Select an exam and click Start. Progress and scores are stored in this browser.`);bind();$('#exam-settings')?.addEventListener('toggle',event=>{optionsOpen=event.target.open});$('#exam-options')?.addEventListener('submit',event=>event.preventDefault());}
+function library(){session=null;view='library';frame(`<div class="strip app-toolbar"><span class="muted">Your personal exam practice library</span><span class="spacer"></span>${textTools()}</div><div class="content">${savedSessionsTable()}${examSettings()}<div class="library"><table><thead><tr><th>Title</th><th>File name</th><th>Questions</th></tr></thead><tbody>${exams.map(e=>`<tr tabindex="0" data-select="${esc(e.id)}" class="${e.id===selected?'selected':''}"><td>▣ &nbsp;${esc(e.number||'')} ${esc(e.title)}</td><td class="muted">${esc(e.title)}.json</td><td>${e.questions.length}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="primary" data-action="setup" ${exam()?'':'disabled'}>Start…</button><button data-action="import">Add…</button><button data-action="remove" ${exam()?'':'disabled'}>Remove</button><button data-action="properties" ${exam()?'':'disabled'}>Properties</button><button data-action="history">History</button><button data-action="refresh-app">Refresh app</button></div></div>${exams.length?'':'<p class="empty">Add your VCE exam to begin.</p>'}</div><div class="notice">Import .vce format 3.1 exams with text choices, JSON exams, or translation memory JSON. Unsupported VCE versions and question types are reported.</div>`, '', `${esc(message)} Select an exam and click Start. Progress and scores are stored in this browser.`);bind();$('#exam-settings')?.addEventListener('toggle',event=>{optionsOpen=event.target.open});$('#exam-options')?.addEventListener('submit',event=>event.preventDefault());}
 function savedSessionsTable(){
  const saved=read('session',null);
  return `<section class="saved-sessions" aria-label="Saved sessions"><h2>Saved sessions</h2>${saved?`<div class="table-scroll"><table><thead><tr><th>Exam / Candidate</th><th>Progress</th><th>Time</th><th>Actions</th></tr></thead><tbody><tr><td>${esc(saved.exam.title)}<br><span class="muted">${esc(saved.candidate)}</span></td><td>${saved.questions.filter(q=>isAnswered(q,saved.answers[q.id])).length} / ${saved.questions.length} answered</td><td>${saved.limit===null?'Elapsed':'Remaining'}<br>${fmt(saved.limit===null?saved.elapsed:Math.max(0,saved.limit-saved.elapsed))}</td><td><button data-action="resume">Resume session</button> <button data-action="delete-session">Delete</button></td></tr></tbody></table></div>`:'<p class="muted">No saved session yet. During an exam, tap Save Session to continue later.</p>'}</section>`;
@@ -150,18 +151,18 @@ function renderExam(){
  ${languageButton()}
  <button data-action="calculator">Calculator</button><span class="spacer"></span>
  <label class="flag-control"><input id="mark" type="checkbox" ${session.marked.includes(q.id)?'checked':''} ${review?'disabled':''}> Flag for Review</label>${textTools()}</div>`:'';
- const content=paused?pausePanel():`<div class="content question">${q?`
+ const content=paused?pausePanel():`<div class="content question" data-translation-layout>${q?`
  <div class="translation-status" data-translation-status role="status"></div><div class="question-tools"><span>Item ${session.index+1} of ${list.length} · Question ${session.questions.indexOf(q)+1}</span><span class="spacer"></span>
- <button data-action="answer">${reveal?'Hide':'Show'} Answer</button>
- ${q.caseStudy?.trim()?'<button data-action="case-study">View Case Study</button>':''}</div>
+ <button data-action="answer"><span data-ui-ar="${reveal?'إخفاء الإجابة':'عرض الإجابة'}">${reveal?'Hide':'Show'} Answer</span></button>
+ ${q.caseStudy?.trim()?'<button data-action="case-study"><span data-ui-ar="عرض دراسة الحالة">View Case Study</span></button>':''}</div>
  <p data-translate="prompt">${renderContent(q.prompt)}</p>
  ${q.caseStudy&&imageTokens(q.caseStudy).length?`<section class="question-diagrams" aria-label="Case study diagrams"><h3>Case study diagrams</h3><p class="muted">These figures belong to the report referenced in this question. View Case Study for the full report.</p>${renderContent(imageTokens(q.caseStudy).join("\n"))}</section>`:''}
  <div class="options">${q.type==='matching'?renderMatching(q,own(session.answers,q.id,[]),{reveal,readOnly:review}):q.options.map((option,index)=>`
  <label class="option ${reveal?(q.answers.includes(index)?'right':'wrong'):''}">
  <input type="${q.answers.length>1?'checkbox':'radio'}" name="answer" value="${index}" ${own(session.answers,q.id,[]).includes(index)?'checked':''} ${review?'disabled':''}>
  <span>${String.fromCharCode(65+index)}.</span><span data-translate="option-${index}">${renderContent(option||'(No option text in source file)')}</span></label>`).join('')}</div>
- ${reveal?`<div class="explanation"><b>Answer: ${q.type==='matching'?q.matchingPrompts.map((p,i)=>`<span data-match-label="${i}">${esc(p)}</span> → <span data-card-label="${q.answers[i]}">${esc(q.options[q.answers[i]])}</span>`).join('\n'):q.answers.map(i=>String.fromCharCode(65+i)).join(', ')}</b>\nSection: ${esc(q.section)}\n\n<span data-translate="explanation">${renderContent(q.explanation||'No explanation provided.')}</span></div>`:''}
- <div class="question-instruction">${q.type==='matching'?'Drag a card onto each matching subject.':q.answers.length>1?'Select all that apply.':'Select the best choice.'}</div>`:'<p>No questions match this filter.</p>'}</div>`;
+ ${reveal?`<div class="explanation"><b><span data-ui-ar="الإجابة">Answer</span>: ${q.type==='matching'?q.matchingPrompts.map((p,i)=>`<span data-match-label="${i}">${esc(p)}</span> → <span data-card-label="${q.answers[i]}">${esc(q.options[q.answers[i]])}</span>`).join('\n'):q.answers.map(i=>`<bdi dir="ltr">${String.fromCharCode(65+i)}</bdi>`).join(', ')}</b>\n<span data-ui-ar="القسم">Section</span>: <span data-translate="section">${esc(q.section)}</span>\n\n<span data-translate="explanation">${q.explanation?.trim()?renderContent(q.explanation):'<span data-ui-ar="لا يتوفر شرح في المصدر.">No explanation provided.</span>'}</span></div>`:''}
+ <div class="question-instruction" data-ui-ar="${q.type==='matching'?'طابِق كل عنصر مع البطاقة المناسبة.':q.answers.length>1?'اختر جميع الإجابات المنطبقة.':'اختر أفضل إجابة.'}">${q.type==='matching'?'Drag a card onto each matching subject.':q.answers.length>1?'Select all that apply.':'Select the best choice.'}</div>`:'<p>No questions match this filter.</p>'}</div>`;
  frame(toolbar+content,
  `${review?'<button data-action="report">Back to Report</button>':`<button data-action="end" class="exam-end">End Exam</button>${sessionControls()}`}
  <span class="spacer"></span>
@@ -198,10 +199,10 @@ function openFilter(value){
  $('#review-filter')?.focus();
 }
 function translateQuestion(q){
- const fields={prompt:q.prompt,explanation:q.explanation};
- q.options.forEach((option,index)=>{fields['option-'+index]=option});
- q.matchingPrompts?.forEach((prompt,index)=>{fields['match-'+index]=prompt});
- return applyTranslation($('#app'),fields,bind);
+ return applyTranslation($('#app'),questionFields(q),translationContext(q),bind);
+}
+function translationContext(q){
+ return {examId:session.exam.sourceId,questionId:q.id};
 }
 function navigatorDialog(){
  const d=modal('Question Navigator',questionTable(session.questions));
@@ -298,7 +299,19 @@ async function action(a){
    }
   }
   break;
- case 'properties':modal('Exam Properties',`<h2>${esc(exam().title)}</h2><p>${exam().questions.length} questions · Passing score: ${passing(exam())}/1000</p><p>${[...new Set(exam().questions.map(q=>q.section))].map(esc).join('<br>')}</p>`);break;
+ case 'properties':{
+  const d=modal('Exam Properties',`<h2>${esc(exam().title)}</h2><p>${exam().questions.length} questions · Passing score: ${passing(exam())}/1000</p><p>${[...new Set(exam().questions.map(q=>q.section))].map(esc).join('<br>')}</p><button type="button" data-export-memory>Export translation memory</button>`);
+  d.querySelector('[data-export-memory]').onclick=()=>{
+   const memory=read('translationMemory',{format:memoryFormat,segments:[],glossary:[]});
+   const url=URL.createObjectURL(new Blob([JSON.stringify(memory,null,2)],{type:'application/json'}));
+   const link=document.createElement('a');
+   link.href=url;
+   link.download='pmp-translation-memory.json';
+   link.click();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  break;
+ }
  case 'history':historyDialog();break;
  case 'resume':resumeSession();break;
  case 'delete-session':
@@ -347,9 +360,10 @@ async function action(a){
  case 'case-study':{
   const q=visible()[session.index];
   if(!q?.caseStudy?.trim())break;
-  const d=modal(q.caseStudyTitle||'Case Study',`${languageButton(false)}<div class="translation-status" data-translation-status role="status"></div><div class="case-study" data-translate="caseStudy">${renderContent(q.caseStudy)}</div>`);
+  const d=modal(q.caseStudyTitle||'Case Study',`${languageButton(false)}<div class="translation-status" data-translation-status role="status"></div><div class="case-study" data-translation-layout data-translate="caseStudy">${renderContent(q.caseStudy)}</div>`);
   d.querySelector('header').dataset.translate='caseStudyTitle';
-  const translateCase=()=>applyTranslation(d,{caseStudyTitle:q.caseStudyTitle||'Case Study',caseStudy:q.caseStudy},bind,()=>translateQuestion(q));
+  if(!q.caseStudyTitle)d.querySelector('header').dataset.uiAr='دراسة الحالة';
+  const translateCase=()=>applyTranslation(d,questionFields(q),translationContext(q),bind);
   d.querySelector('[data-translation-toggle]').onclick=()=>{
    toggleLanguage();
    translateCase();
@@ -372,9 +386,21 @@ $('#import').onchange=async event=>{
  const file=event.target.files[0];
  if(!file)return;
  try{
-  const parsed=validateExam(file.name.toLowerCase().endsWith('.vce')?parseVce(await file.arrayBuffer()):JSON.parse(await file.text()));
+  const data=file.name.toLowerCase().endsWith('.vce')?parseVce(await file.arrayBuffer()):JSON.parse(await file.text());
+  if(data?.format===memoryFormat){
+   const memory=validateMemory(data);
+   if(await save({translationMemory:previous=>mergeMemory(previous,memory)})){
+    message='Translation memory imported.';
+    library();
+   }
+   return;
+  }
+  const parsed=validateExam(data);
+  const segments=await examSegments(parsed);
   parsed.id=crypto.randomUUID();
-  if(await save({exams:items=>[...(items||[]),parsed]})){
+  const changes={exams:items=>[...(items||[]),parsed]};
+  if(segments.length)changes.translationMemory=previous=>mergeMemory(previous,{segments,glossary:[]});
+  if(await save(changes)){
    // This request is best-effort and remains under browser control.
    navigator.storage?.persist?.().catch(()=>{});
    loadExams();
@@ -400,6 +426,7 @@ document.addEventListener('visibilitychange',()=>{
 
 try{
  await initializeStorage();
+ restoreLanguage();
  loadExams();
  selected=exams[0]?.id;
  textSize=Math.max(100,Math.min(200,Number(read('textSize',100))||100));

@@ -112,3 +112,8 @@
 #exam-settings summary {cursor:pointer;width:max-content}
 #exam-settings form {max-width:650px;padding-block:8px}
 .option [data-translate][dir="rtl"] {flex:1}
+
+.arabic-content .match-card,.arabic-content .match-target {text-align:start}
+.arabic-content .option [data-translate] {flex:1;min-width:0}
+.arabic-content [dir="ltr"] {unicode-bidi:isolate}
+.arabic-content > [data-translate],.arabic-content .explanation [data-translate] {text-align:start}

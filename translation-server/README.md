@@ -1,6 +1,6 @@
 # Legacy Arabic translation service
 
-The current player translates in the browser. This directory documents the previous standalone backend and is only relevant to deployments that still use it. See the [player README](../README.md#arabic-translation).
+The current player displays stored translations in the browser. This directory documents the previous standalone backend and is only relevant to deployments that still use it. See the [player README](../README.md#arabic-translation).
 
 GitHub Pages serves the player. Cloud Run receives on-demand translation requests and calls Google Cloud Translation Advanced using an attached service account. The repository contains a starter English–Arabic PMP glossary for consistent terminology.
 
@@ -38,7 +38,7 @@ curl --fail-with-body "$VCE_TRANSLATION_URL" \
   --data '{"texts":["The project sponsor must not exceed 10%.","Option B is correct. CPI = EV / AC."]}'
 ```
 
-The legacy frontend used this URL as its translation endpoint. The current frontend uses local inference. The deployment uses short-lived service identity tokens.
+The legacy frontend used this URL as its translation endpoint. The current frontend uses imported bilingual JSON and translation memory. The deployment uses short-lived service identity tokens.
 
 ## Data and cost
 

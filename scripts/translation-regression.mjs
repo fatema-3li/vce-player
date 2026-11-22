@@ -1,172 +1,128 @@
 import assert from 'node:assert/strict';
+import {examSegments,fingerprint,memoryFormat} from '../translation-data.js';
+
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
 const url=process.env.APP_URL||'http://localhost:3000';
-const image='[[VCE_IMAGE:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==]]';
-const exam={title:'Translation fixture',questions:[
- {id:'multiple',section:'Scope',prompt:'Which sponsor does not approve 10%?',options:['Sponsor A','Sponsor B'],answers:[1],explanation:'Option B does not approve 10%.',caseStudyTitle:'Budget study',caseStudy:'The change request requires 10%.\n'+image},
- {id:'match',section:'Agile',type:'matching',prompt:'Match the events.',options:['Sprint Review','Retrospective'],answers:[1,0],matchingPrompts:['Process improvement','Product feedback']},
- {id:'error',section:'Agile',prompt:'Fallback question',options:['First','Second'],answers:[0]}
-]};
-const translations=new Map(Object.entries({
- 'Which sponsor does not approve 10%?':'أي راعٍ لا يوافق على 10%؟',
- 'Sponsor A':'الراعي A','Sponsor B':'الراعي B','Option B does not approve 10%.':'الخيار B لا يوافق على 10%.',
- 'Budget study':'دراسة الميزانية','The change request requires 10%.':'يتطلب طلب التغيير 10%.',
- 'Match the events.':'طابِق الفعاليات.','Sprint Review':'مراجعة السبرنت','Retrospective':'الاجتماع الاستعادي',
- 'Process improvement':'تحسين العمليات','Product feedback':'الملاحظات على المنتج',
- 'Fallback question':'سؤال بديل','First':'الأول','Second':'الثاني','Updated fallback question':'السؤال البديل المحدّث'
-}));
+const image='[[VCE_IMAGE:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwAFgAI/ScLbtAAAAABJRU5ErkJggg==]]';
+
+async function bilingual(question,fields){
+ question.translation={version:1,fields:{}};
+ for(const [field,[en,ar]] of Object.entries(fields)){
+  question.translation.fields[field]={sourceHash:await fingerprint(en),segments:[{ar,status:'verified',reusable:true}]};
+ }
+ return question;
+}
+
+const q=await bilingual({
+ id:'choose',section:'Scope',prompt:'Which sponsor does not approve 10%?',options:['Sponsor A','Sponsor B'],answers:[1],
+ explanation:'Sponsor B does not approve 10%.',caseStudyTitle:'Budget study',caseStudy:'The request requires 10%.\n'+image
+},{
+ prompt:['Which sponsor does not approve 10%?','أي راعٍ لا يوافق على 10%؟'],
+ 'option-0':['Sponsor A','الراعي A'],
+ 'option-1':['Sponsor B','الراعي B'],
+ explanation:['Sponsor B does not approve 10%.','الراعي B لا يوافق على 10%.'],
+ section:['Scope','النطاق'],
+ caseStudyTitle:['Budget study','دراسة الميزانية'],
+ caseStudy:['The request requires 10%.\n'+image,'يتطلب الطلب 10%.']
+});
+const match=await bilingual({
+ id:'match',section:'Scope',type:'matching',prompt:'Match each event.',options:['Sprint Review','Retrospective'],
+ matchingPrompts:['Process improvement','Product feedback'],answers:[1,0]
+},{
+ prompt:['Match each event.','طابِق كل فعالية.'],
+ 'option-0':['Sprint Review','مراجعة السبرنت'],
+ 'option-1':['Retrospective','الاجتماع الاستعادي'],
+ 'match-0':['Process improvement','تحسين العمليات'],
+ 'match-1':['Product feedback','الملاحظات على المنتج']
+});
+const plain={id:'reuse',section:'Scope',prompt:q.prompt+' Consider the latest data.',options:q.options,answers:[1]};
+const exam={sourceId:'test-bilingual',title:'Stored Arabic fixture',questions:[q,match,plain]};
+const stale=structuredClone(exam);
+stale.questions[0].prompt='Which sponsor approves 10%?';
+await assert.rejects(()=>examSegments(stale),/fingerprint mismatch/);
+
 try{
  for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
-  const mobile=viewport.width<700;
-  const context=await browser.newContext({viewport,isMobile:mobile,hasTouch:mobile});
+  const context=await browser.newContext({viewport,isMobile:viewport.width<700,hasTouch:viewport.width<700});
   const page=await context.newPage();
-  let requests=[];
-  let fail=true;
-  await page.route('**/translation-worker.js*',route=>route.fulfill({
-   contentType:'text/javascript',
-   body:`const translations=new Map(${JSON.stringify([...translations])});
-   self.onmessage=({data:{text}})=>{
-    self.postMessage({ready:true});
-    setTimeout(()=>self.postMessage(text==='Fallback question'&&${fail}?{error:true}:{value:translations.get(text)}),text==='Which sponsor does not approve 10%?'?500:0);
-   };`
-  }));
-  await page.exposeFunction('recordTranslation',text=>requests.push(text));
-  await page.addInitScript(()=>{
-   const postMessage=Worker.prototype.postMessage;
-   Worker.prototype.postMessage=function(data){
-    window.recordTranslation(data.text);
-    return postMessage.call(this,data);
-   };
+  const errors=[];
+  const external=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.route('**/*',route=>{
+   if(route.request().url().startsWith(new URL(url).origin+'/'))return route.continue();
+   external.push(route.request().url());
+   return route.abort();
   });
   const button=name=>page.getByRole('button',{name,exact:true});
   const toggle=()=>button('العربية / English').click();
   const prompt=page.locator('[data-translate=prompt]');
+  const status=page.locator('#app [data-translation-status]');
+  const importJSON=data=>page.locator('#import').setInputFiles({name:'fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});
   await page.goto(url);
-  const importExam=async data=>{
-   await page.locator('#import').setInputFiles({name:'fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});
-   await page.getByRole('row').filter({hasText:data.title}).waitFor();
-  };
-  await importExam(exam);
+  await importJSON(exam);
+  await page.getByRole('row').filter({hasText:exam.title}).waitFor();
+  const correction=(await examSegments(exam)).find(entry=>entry.scope.questionId===q.id&&entry.scope.field==='explanation');
+  correction.ar='الراعي B لا يوافق على نسبة 10%.';
+  await importJSON({format:memoryFormat,segments:[correction],glossary:[{en:'scope',ar:'النطاق'}]});
+  await page.getByText('Translation memory imported.',{exact:false}).waitFor();
   await button('Start…').click();
-  assert.equal(await page.locator('dialog input').count(),1);
   await page.getByRole('textbox',{name:'Your name'}).fill('Test candidate');
   await button('OK').click();
-  assert.match(await page.locator('#clock').innerText(),/^Time Remaining: 16:(40:00|39:59)$/);
-  const checked=page.locator('[name=answer][value="1"]');
-  await checked.check();
+  await page.locator('[name=answer][value="1"]').check();
   await page.locator('#mark').check();
-  await toggle();
-  await page.getByText(/Translating on this device/).waitFor();
-  await button('Continue in English').click();
-  assert.equal(await prompt.innerText(),exam.questions[0].prompt);
-  assert.equal(await checked.isChecked(),true);
-  requests=[];
-  await toggle();
-  await page.getByText('أي راعٍ لا يوافق على 10%؟',{exact:true}).waitFor();
-  assert.equal(await prompt.evaluate(e=>getComputedStyle(e).direction),'rtl');
-  assert.equal(await checked.isChecked(),true);
-  assert.equal(await page.locator('#mark').isChecked(),true);
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await page.getByText('الراعي B',{exact:true}).waitFor();
-  assert.deepEqual(requests,['Which sponsor does not approve 10%?','Sponsor A','Sponsor B']);
   await button('Show Answer').click();
-  await page.getByText('الخيار B لا يوافق على 10%.',{exact:true}).waitFor();
-  assert.match(await page.locator('.explanation b').innerText(),/Answer: B/);
-  await button('View Case Study').click();
-  await page.getByText('دراسة الميزانية',{exact:true}).waitFor();
-  assert.match(await page.locator('.case-study').innerText(),/طلب التغيير يتطلب|يتطلب طلب التغيير/);
-  assert.equal(await page.locator('.case-study img').getAttribute('src'),'data:'+image.slice(12,-2));
+  await context.setOffline(true);
+  const clock=await page.locator('#clock').innerText();
+  await toggle();
+  await prompt.getByText('أي راعٍ لا يوافق على 10%؟',{exact:true}).waitFor();
+  assert.match(await status.innerText(),/مكتملة/);
+  assert.equal(await prompt.getAttribute('dir'),'rtl');
+  assert.equal(await page.locator('[name=answer][value="1"]').isChecked(),true);
+  assert.equal(await page.locator('#mark').isChecked(),true);
+  assert.match(await page.locator('#clock').innerText(),/^Time Remaining: 16:(40|39):/);
+  assert.match(clock,/16:(40|39):/);
+  assert.match(await page.locator('.explanation').innerText(),/الإجابة: B.*?الراعي B لا يوافق على نسبة 10%/s);
+  await button('عرض دراسة الحالة').click();
+  await page.locator('dialog').getByText('يتطلب الطلب 10%.').waitFor();
+  assert.equal(await page.locator('dialog .exam-image').count(),1);
   await button('Close').click();
-  await toggle();
-  assert.equal(await prompt.innerText(),exam.questions[0].prompt);
-  assert.equal(await checked.isChecked(),true);
-  await toggle();
-  await page.getByText('أي راعٍ لا يوافق على 10%؟',{exact:true}).waitFor();
-  assert.equal(requests.length,6);
+
   await button('Next').click();
-  await page.getByText('طابِق الفعاليات.',{exact:true}).waitFor();
-  if(mobile){
-   await page.locator('[data-card="1"]').tap();
-   await page.locator('[data-match="0"]').tap();
-  }else{
-   const card=await page.locator('[data-card="1"]').boundingBox();
-   const target=await page.locator('[data-match="0"]').boundingBox();
-   await page.mouse.move(card.x+card.width/2,card.y+card.height/2);
-   await page.mouse.down();
-   await page.mouse.move(target.x+target.width/2,target.y+target.height/2,{steps:10});
-   await page.mouse.up();
-  }
+  await page.locator('[data-card="1"]').click();
+  await page.locator('[data-match="0"]').click();
   await page.locator('[data-card="0"]').click();
   await page.locator('[data-match="1"]').click();
   await toggle();
-  assert.equal(await page.locator('[data-match="0"]').getAttribute('data-value'),'1');
-  assert.equal(await page.locator('[data-match="1"]').getAttribute('data-value'),'0');
-  assert.equal(await prompt.innerText(),exam.questions[1].prompt);
+  assert.equal(await page.locator('[data-match="0"]').innerText(),'Retrospective');
   await toggle();
-  await button('Next').click();
-  await page.getByText(/could not be loaded or completed/).waitFor();
-  assert.equal(await prompt.innerText(),exam.questions[2].prompt);
-  fail=false;
-  await button('Retry').click();
-  await page.getByText('سؤال بديل',{exact:true}).waitFor();
-  await page.locator('[name=answer][value="0"]').check();
+  await page.locator('[data-match="0"]').getByText('الاجتماع الاستعادي').waitFor();
+  await page.locator('#mark').check();
   await button('Save Session').click();
   await button('Resume session').waitFor();
+  await context.setOffline(false);
   await page.reload();
   await button('Resume session').click();
-  assert.equal(await prompt.innerText(),exam.questions[2].prompt);
-  const before=requests.length;
-  await toggle();
-  await page.getByText('سؤال بديل',{exact:true}).waitFor();
-  assert.equal(requests.length,before);
+  await page.locator('[data-match="0"]').getByText('الاجتماع الاستعادي').waitFor();
+  assert.equal(await page.locator('[data-match="1"]').innerText(),'مراجعة السبرنت');
+  assert.equal(await page.locator('#mark').isChecked(),true);
+
+  await button('Next').click();
+  await prompt.getByText(/أي راعٍ لا يوافق على 10%؟.*Consider the latest data/).waitFor();
+  assert.match(await status.innerText(),/جزئية/);
+  await page.locator('[name=answer][value="1"]').check();
   await button('End Exam').click();
-  await button('Continue').click();
-  await button('Submit Exam').click();
-  await page.locator('.report').waitFor();
-  assert.match(await page.locator('.report').innerText(),/Your score: 1000\/1000/);
+  await page.locator('dialog[open] [type=submit]').click();
+  await page.locator('dialog[open] [type=submit]').click();
+  await page.getByText('3 correct · 0 incorrect or unanswered · 3 total questions').waitFor();
   await button('View Marked').click();
-  await page.getByText('أي راعٍ لا يوافق على 10%؟',{exact:true}).waitFor();
+  await prompt.getByText('أي راعٍ لا يوافق على 10%؟',{exact:true}).waitFor();
   await toggle();
-  assert.equal(await prompt.innerText(),exam.questions[0].prompt);
-  await button('Back to Report').click();
-  await button('Exit').click();
-  await importExam({...exam,title:'Updated exam',questions:[{...exam.questions[2],prompt:'Updated fallback question'}]});
-  await button('Start…').click();
-  await button('OK').click();
-  await toggle();
-  await page.getByText('السؤال البديل المحدّث',{exact:true}).waitFor();
-  assert.equal(requests.at(-1),'Updated fallback question');
+  assert.equal(await prompt.innerText(),q.prompt);
+  assert.equal(await page.locator('#review-filter').inputValue(),'marked');
+  assert.deepEqual(external,[]);
+  assert.deepEqual(errors,[]);
   await context.close();
+  console.log('PASS: stored English–Arabic translation, matching, Show Answer, partial reuse, save/resume and grading at '+viewport.width+'px');
  }
- const iphone=await browser.newContext({
-  viewport:{width:390,height:844},isMobile:true,hasTouch:true,
-  userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1'
- });
- const iosPage=await iphone.newPage();
- const modelRequests=[];
- iosPage.on('request',request=>{
-  if(/translation-worker\.js|huggingface\.co|cdn\.jsdelivr\.net/.test(request.url()))modelRequests.push(request.url());
- });
- await iosPage.goto(url);
- const iosExam={title:'iPhone translation fixture',questions:[{...exam.questions[0],options:['Risk register','Project charter']}]};
- await iosPage.locator('#import').setInputFiles({name:'iphone.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(iosExam))});
- await iosPage.getByRole('row').filter({hasText:iosExam.title}).waitFor();
- await iosPage.getByRole('button',{name:'Start…',exact:true}).click();
- await iosPage.getByRole('textbox',{name:'Your name'}).fill('iPhone test');
- await iosPage.getByRole('button',{name:'OK',exact:true}).click();
- const answer=iosPage.locator('[name=answer][value="1"]');
- await answer.check();
- const language=iosPage.getByRole('button',{name:'العربية / English',exact:true});
- await language.click();
- await iosPage.getByText(/Full Arabic translation is paused on iPhone/).waitFor();
- assert.equal(await iosPage.locator('[data-translate=prompt]').innerText(),iosExam.questions[0].prompt);
- assert.equal(await iosPage.locator('[data-translate=option-0]').innerText(),'سجل المخاطر');
- assert.equal(await answer.isChecked(),true);
- await language.click();
- assert.equal(await iosPage.locator('[data-translate=option-0]').innerText(),'Risk register');
- assert.equal(await answer.isChecked(),true);
- assert.deepEqual(modelRequests,[]);
- await iphone.close();
- console.log('PASS: Arabic and English on desktop and phone, on-demand requests, cache invalidation, retry, matching, scores and saved sessions.');
 }finally{await browser.close()}
