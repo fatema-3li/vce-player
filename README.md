@@ -92,3 +92,9 @@ The current verified scoped record takes precedence. For other questions, the pl
 To correct an existing translation, export the memory, copy the relevant record with its existing scope, edit the Arabic and status, and import the correction. Import retains prior revisions and uses the latest distinct scoped record. Import vocabulary updates using the same memory format. Keep backups of private exam and memory files outside the public repository.
 
 Run `scripts/translation-regression.mjs` with Playwright and the app running locally to check both layouts, offline display, partial reuse, review, and session state.
+
+### Local correction editor
+
+**Properties → Edit Arabic translations** opens the editor for the selected exam. During an exam or review, **Edit Arabic** opens the current question. English, choices, matching relationships, and grading keys are read-only. Each nonblank source block has a separate Arabic field, verification status, reuse policy, and ambiguity/context note. New entries default to needing review; they remain English in the exam until marked verified. Choose reuse for this question only, exact same-role text, or whole sentences. Never mark a translation verified merely because a glossary word matched.
+
+Save commits the translation and its revision to the existing browser storage. Export bilingual exam includes the untouched English, original keys, stable identifiers, source fingerprints, and current translation fields. Export translation memory includes retained revisions and glossary entries. A repeated import of an earlier revision now makes that wording current again. Downloaded files may contain private exam text; keep them outside the public repository and back them up separately. No translation service or model is called by this editor.

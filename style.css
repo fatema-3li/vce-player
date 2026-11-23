@@ -117,3 +117,12 @@
 .arabic-content .option [data-translate] {flex:1;min-width:0}
 .arabic-content [dir="ltr"] {unicode-bidi:isolate}
 .arabic-content > [data-translate],.arabic-content .explanation [data-translate] {text-align:start}
+
+.translation-editor{width:min(900px,96vw);max-height:90dvh;overflow:auto}
+.translation-editor fieldset{margin:16px 0;min-width:0;border:1px solid #bbc7d4}
+.translation-segment{display:grid;gap:10px;margin:12px 0;padding:12px;background:#f4f6fa;overflow-wrap:anywhere}
+.translation-segment label{display:block;white-space:normal}
+.translation-segment textarea{display:block;width:100%;min-height:110px;box-sizing:border-box;font:inherit;line-height:1.8}
+.translation-segment input[data-note]{display:block;width:100%;box-sizing:border-box}
+.translation-editor .actions{flex-wrap:wrap}
+.translation-editor [data-edit-status]{color:#174d86}

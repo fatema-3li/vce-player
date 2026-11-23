@@ -1,13 +1,14 @@
-import {examSegments, memoryFormat, mergeMemory, questionFields, validateMemory} from './translation-data.js?v=stored-arabic-v1';
-import {applyTranslation,languageButton,toggleLanguage,restoreLanguage} from './translation.js?v=stored-arabic-v1';
-import {openCalculator} from './calculator.js?v=stored-arabic-v1';
-import {renderMatching,bindMatching} from './matching-ui.js?v=stored-arabic-v1';
-import {matchingQuestion} from './matching.js?v=stored-arabic-v1';
-import {renderContent,imageTokens} from './content.js?v=stored-arabic-v1';
-import {parseVce} from './vce.js?v=stored-arabic-v1';
-import {score,correct,validateExam,isAnswered} from './engine.js?v=stored-arabic-v1';
+import {openTranslationEditor} from './translation-editor.js?v=stored-arabic-editor-20261123';
+import {examSegments, memoryFormat, mergeMemory, questionFields, validateMemory} from './translation-data.js?v=stored-arabic-editor-20261123';
+import {applyTranslation,languageButton,toggleLanguage,restoreLanguage} from './translation.js?v=stored-arabic-editor-20261123';
+import {openCalculator} from './calculator.js?v=stored-arabic-editor-20261123';
+import {renderMatching,bindMatching} from './matching-ui.js?v=stored-arabic-editor-20261123';
+import {matchingQuestion} from './matching.js?v=stored-arabic-editor-20261123';
+import {renderContent,imageTokens} from './content.js?v=stored-arabic-editor-20261123';
+import {parseVce} from './vce.js?v=stored-arabic-editor-20261123';
+import {score,correct,validateExam,isAnswered} from './engine.js?v=stored-arabic-editor-20261123';
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-import {initializeStorage,read,write} from './storage.js?v=stored-arabic-v1';
+import {initializeStorage,read,write} from './storage.js?v=stored-arabic-editor-20261123';
 let exams=[],selected,session=null,view='library',show=false,review=false,filter='all',message='',textSize=100;
 let saving=false;
 let optionsOpen=false;
@@ -149,6 +150,7 @@ function renderExam(){
  if(q&&!paused&&!review&&!session.seen.includes(q.id))session.seen.push(q.id);
  const toolbar=q&&!paused?`<div class="exam-toolbar" role="group" aria-label="Exam tools">
  ${languageButton()}
+ <button data-action="edit-translations">Edit Arabic</button>
  <button data-action="calculator">Calculator</button><span class="spacer"></span>
  <label class="flag-control"><input id="mark" type="checkbox" ${session.marked.includes(q.id)?'checked':''} ${review?'disabled':''}> Flag for Review</label>${textTools()}</div>`:'';
  const content=paused?pausePanel():`<div class="content question" data-translation-layout>${q?`
@@ -300,7 +302,8 @@ async function action(a){
   }
   break;
  case 'properties':{
-  const d=modal('Exam Properties',`<h2>${esc(exam().title)}</h2><p>${exam().questions.length} questions · Passing score: ${passing(exam())}/1000</p><p>${[...new Set(exam().questions.map(q=>q.section))].map(esc).join('<br>')}</p><button type="button" data-export-memory>Export translation memory</button>`);
+  const d=modal('Exam Properties',`<h2>${esc(exam().title)}</h2><p>${exam().questions.length} questions · Passing score: ${passing(exam())}/1000</p><p>${[...new Set(exam().questions.map(q=>q.section))].map(esc).join('<br>')}</p><button type="button" data-edit-translations>Edit Arabic translations</button><button type="button" data-export-memory>Export translation memory</button>`);
+  d.querySelector('[data-edit-translations]').onclick=()=>{const target=exam();d.close();editTranslations(target);};
   d.querySelector('[data-export-memory]').onclick=()=>{
    const memory=read('translationMemory',{format:memoryFormat,segments:[],glossary:[]});
    const url=URL.createObjectURL(new Blob([JSON.stringify(memory,null,2)],{type:'application/json'}));
@@ -343,6 +346,7 @@ async function action(a){
  }
  case 'end':confirmEnd();break;
  case 'navigator':navigatorDialog();break;
+ case 'edit-translations':editTranslations(exams.find(e=>e.id===session.exam.id)||{...session.exam,questions:session.questions});break;
  case 'language':
   toggleLanguage();
   translateQuestion(visible()[session.index]);
@@ -434,4 +438,16 @@ try{
  library();
 }catch{
  frame('<div class="content" role="alert">Browser storage could not be opened. Reload this page to retry.</div>');
+}
+
+async function editTranslations(target){
+ try{
+  await openTranslationEditor({exam:target,memory:read('translationMemory',null),modal,questionId:session&&view==='exam'?visible()[session.index]?.id:undefined,
+   commit:async(snapshot,memory)=>{
+    const ok=await save({exams:items=>(items||[]).map(e=>e.id===target.id?{...e,sourceId:snapshot.sourceId,questions:snapshot.questions}:e),translationMemory:previous=>mergeMemory(previous,memory)});
+    if(ok){target.sourceId=snapshot.sourceId;target.questions=snapshot.questions;if(session?.exam.id===target.id)session.exam.sourceId=snapshot.sourceId;loadExams();}
+    return ok;
+   },onSaved:()=>{if(session&&view==='exam')translateQuestion(visible()[session.index]);}
+  });
+ }catch(error){alert('Translation editor: '+error.message);}
 }
