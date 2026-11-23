@@ -1,4 +1,4 @@
-import {translateForExam} from './translation-quality.js?v=arabic-ios-recovery-20261122';
+import {translateForExam} from './translation-quality.js?v=stored-arabic-editor-20261123';
 
 const runtime = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/';
 const model = 'Xenova/opus-mt-en-ar';

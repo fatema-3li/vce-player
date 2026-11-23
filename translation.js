@@ -1,6 +1,6 @@
-import {renderContent} from './content.js?v=stored-arabic-v1';
-import {fingerprint, indexMemory, textParts, resolveSegment} from './translation-data.js?v=stored-arabic-v1';
-import {read,write} from './storage.js?v=stored-arabic-v1';
+import {renderContent} from './content.js?v=stored-arabic-editor-20261123';
+import {fingerprint, indexMemory, textParts, resolveSegment} from './translation-data.js?v=stored-arabic-editor-20261123';
+import {read,write} from './storage.js?v=stored-arabic-editor-20261123';
 
 const originals = new WeakMap();
 const active = new WeakMap();

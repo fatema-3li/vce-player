@@ -1,4 +1,4 @@
-import {imageTokens} from './content.js?v=stored-arabic-v1';
+import {imageTokens} from './content.js?v=stored-arabic-editor-20261123';
 
 export const memoryFormat = 'pmp-translation-memory-v1';
 
@@ -106,7 +106,12 @@ export function validateMemory(data) {
 export function mergeMemory(previous, added) {
  function append(old, updates) {
   const merged = new Map(old.map(entry => [JSON.stringify(entry),entry]));
-  for (const entry of updates) merged.set(JSON.stringify(entry),entry);
+  for (const entry of updates) {
+   // Reimporting a prior revision must make it current again.
+   const key = JSON.stringify(entry);
+   merged.delete(key);
+   merged.set(key,entry);
+  }
   return [...merged.values()];
  }
  return {format:memoryFormat, segments:append(previous?.segments || [],added.segments),
@@ -160,4 +165,34 @@ export function resolveSegment(en, field, index, context, memory) {
   return sentence.replace(sentence.trim(),() => match);
  }).join('');
  return {text:translated ? text : en,translated,total:sentences.length};
+}
+
+// Build an editable/exportable snapshot without touching English or grading.
+export async function translationSnapshot(exam, memory) {
+ const result = structuredClone(exam);
+ result.sourceId ||= 'exam-sha256-'+await fingerprint(JSON.stringify({title:exam.title,
+  questions:exam.questions.map(q=>({id:q.id,fields:questionFields(q)}))}));
+ const indexed = indexMemory(memory);
+ for (const q of result.questions) {
+  const fields = {};
+  for (const [field,source] of Object.entries(questionFields(q))) {
+   if (!source?.trim()) continue;
+   const sourceHash = await fingerprint(source);
+   const parts = textParts(source).filter(part=>part.text?.trim());
+   fields[field] = {sourceHash,segments:parts.map((part,index)=>{
+    const scope={examId:result.sourceId,questionId:q.id,field,sourceHash,index};
+    const scoped=indexed.scoped.get(scopeKey(scope));
+    if (scoped?.en===part.text.trim()) {
+     const {ar,status,reusable,note}=scoped;
+     return {status,...(ar===undefined?{}:{ar}),...(reusable===undefined?{}:{reusable}),...(note===undefined?{}:{note})};
+    }
+    const existing=q.translation?.fields?.[field];
+    if(existing?.sourceHash===sourceHash && existing.segments?.[index]) return existing.segments[index];
+    const ar=indexed.exact.get(key(fieldRole(field),part.text.trim()));
+    return ar ? {ar,status:'verified'} : null;
+   })};
+  }
+  q.translation={version:1,fields};
+ }
+ return result;
 }
