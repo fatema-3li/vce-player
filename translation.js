@@ -1,7 +1,7 @@
-import {bundledTranslation} from './bundled-translations.js?v=introduction-arabic-20261124';
-import {renderContent} from './content.js?v=introduction-arabic-20261124';
-import {fingerprint, indexMemory, textParts, resolveSegment} from './translation-data.js?v=introduction-arabic-20261124';
-import {read,write} from './storage.js?v=introduction-arabic-20261124';
+import {bundledTranslation} from './bundled-translations.js?v=introduction-native-fix-20261124';
+import {renderContent} from './content.js?v=introduction-native-fix-20261124';
+import {fingerprint, indexMemory, textParts, resolveSegment} from './translation-data.js?v=introduction-native-fix-20261124';
+import {read,write} from './storage.js?v=introduction-native-fix-20261124';
 
 const originals = new WeakMap();
 const active = new WeakMap();
@@ -68,7 +68,7 @@ export async function applyTranslation(root, fields, context, bindImages) {
  const promptHash = fields.prompt?.trim() ? await fingerprint(fields.prompt) : undefined;
  const results = await Promise.all([...groups].map(async ([field,elements]) => {
   const source = fields[field];
-  const sourceHash = context.examId ? await fingerprint(source) : undefined;
+  const sourceHash = await fingerprint(source);
   const parts = textParts(source);
   let translated = 0, total = 0, index = 0;
   const text = parts.map(part => {
@@ -80,7 +80,7 @@ export async function applyTranslation(root, fields, context, bindImages) {
    const scoped=memory.scoped.get(JSON.stringify([context.examId,context.questionId,field,sourceHash,segmentIndex]));
    if (!result.translated && !scoped) {
     const ar=bundledTranslation(context.questionId,promptHash,field,sourceHash,segmentIndex);
-    if (ar) { result.text=ar; result.translated=1; }
+    if (ar) { result.text=ar; result.translated=1; result.total=1; }
    }
    translated += result.translated;
    total += result.total;

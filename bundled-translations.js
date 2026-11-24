@@ -1,4 +1,4 @@
-import {introductionArabic} from './introduction-arabic.js?v=introduction-arabic-20261124';
+import {introductionArabic} from './introduction-arabic.js?v=introduction-native-fix-20261124';
 const questions = new Map(introductionArabic.map(q=>[q.id,q]));
 
 // Require the original prompt and field fingerprints: never guess by question order.

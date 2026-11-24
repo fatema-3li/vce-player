@@ -1,4 +1,4 @@
-import {imageTokens} from './content.js?v=introduction-arabic-20261124';
+import {imageTokens} from './content.js?v=introduction-native-fix-20261124';
 
 export const memoryFormat = 'pmp-translation-memory-v1';
 

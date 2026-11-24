@@ -1,6 +1,6 @@
-import {matchingQuestion} from './matching.js?v=introduction-arabic-20261124';
-import {imageTokens} from './content.js?v=introduction-arabic-20261124';
-import {imageIssue} from './image-integrity.js?v=introduction-arabic-20261124';
+import {matchingQuestion} from './matching.js?v=introduction-native-fix-20261124';
+import {imageTokens} from './content.js?v=introduction-native-fix-20261124';
+import {imageIssue} from './image-integrity.js?v=introduction-native-fix-20261124';
 // Format-31 interoperability reader. Field framing documented at
 // https://github.com/jgt87/vce-player/blob/main/docs/VCE-FILE-FORMAT.md
 // Independently implemented; rejects unsupported structures rather than guessing.
