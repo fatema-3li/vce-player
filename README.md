@@ -98,3 +98,16 @@ Run `scripts/translation-regression.mjs` with Playwright and the app running loc
 **Properties → Edit Arabic translations** opens the editor for the selected exam. During an exam or review, **Edit Arabic** opens the current question. English, choices, matching relationships, and grading keys are read-only. Each nonblank source block has a separate Arabic field, verification status, reuse policy, and ambiguity/context note. New entries default to needing review; they remain English in the exam until marked verified. Choose reuse for this question only, exact same-role text, or whole sentences. Never mark a translation verified merely because a glossary word matched.
 
 Save commits the translation and its revision to the existing browser storage. Export bilingual exam includes the untouched English, original keys, stable identifiers, source fingerprints, and current translation fields. Export translation memory includes retained revisions and glossary entries. A repeated import of an earlier revision now makes that wording current again. Downloaded files may contain private exam text; keep them outside the public repository and back them up separately. No translation service or model is called by this editor.
+
+### Introduction VCE: Arabic included
+
+The approved Introduction 2027 Arabic translations are included with the player.
+Import the original Introduction VCE and use **العربية / English**; a separate
+JSON import is unnecessary. Existing copies and saved sessions also use this
+fallback after refreshing the app. Question identifiers and SHA-256 fingerprints
+of both the prompt and translated field must match. Different or edited exams
+remain English when they do not match. Existing local memory and explicit
+review decisions take precedence. No exams, answers, history, or saved sessions
+are rewritten. The public bundle contains the approved Arabic segments and
+fingerprints; the PDF, English exam records and private glossary/memory are not
+included.

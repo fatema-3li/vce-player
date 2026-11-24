@@ -1,5 +1,5 @@
-import {questionFields,textParts,translationSnapshot,examSegments,mergeMemory,memoryFormat} from './translation-data.js?v=stored-arabic-editor-20261123';
-import {renderContent} from './content.js?v=stored-arabic-editor-20261123';
+import {questionFields,textParts,translationSnapshot,examSegments,mergeMemory,memoryFormat} from './translation-data.js?v=introduction-arabic-20261124';
+import {renderContent} from './content.js?v=introduction-arabic-20261124';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export function downloadJSON(data,name){

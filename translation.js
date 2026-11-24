@@ -1,6 +1,7 @@
-import {renderContent} from './content.js?v=stored-arabic-editor-20261123';
-import {fingerprint, indexMemory, textParts, resolveSegment} from './translation-data.js?v=stored-arabic-editor-20261123';
-import {read,write} from './storage.js?v=stored-arabic-editor-20261123';
+import {bundledTranslation} from './bundled-translations.js?v=introduction-arabic-20261124';
+import {renderContent} from './content.js?v=introduction-arabic-20261124';
+import {fingerprint, indexMemory, textParts, resolveSegment} from './translation-data.js?v=introduction-arabic-20261124';
+import {read,write} from './storage.js?v=introduction-arabic-20261124';
 
 const originals = new WeakMap();
 const active = new WeakMap();
@@ -64,6 +65,7 @@ export async function applyTranslation(root, fields, context, bindImages) {
   indexedSource = stored;
  }
  const memory = indexedMemory;
+ const promptHash = fields.prompt?.trim() ? await fingerprint(fields.prompt) : undefined;
  const results = await Promise.all([...groups].map(async ([field,elements]) => {
   const source = fields[field];
   const sourceHash = context.examId ? await fingerprint(source) : undefined;
@@ -72,7 +74,14 @@ export async function applyTranslation(root, fields, context, bindImages) {
   const text = parts.map(part => {
    if (!part.text?.trim()) return part.image ?? part.text;
    const trimmed = part.text.trim();
-   const result = resolveSegment(trimmed,field,index++,{...context,sourceHash},memory);
+   const segmentIndex=index++;
+   const result = resolveSegment(trimmed,field,segmentIndex,{...context,sourceHash},memory);
+   // Explicit local review decisions take precedence over the published fallback.
+   const scoped=memory.scoped.get(JSON.stringify([context.examId,context.questionId,field,sourceHash,segmentIndex]));
+   if (!result.translated && !scoped) {
+    const ar=bundledTranslation(context.questionId,promptHash,field,sourceHash,segmentIndex);
+    if (ar) { result.text=ar; result.translated=1; }
+   }
    translated += result.translated;
    total += result.total;
    return part.text.replace(trimmed,() => result.translated ? result.text : '\u2066'+trimmed+'\u2069');
