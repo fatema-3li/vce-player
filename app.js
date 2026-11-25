@@ -1,4 +1,3 @@
-import {openTranslationEditor} from './translation-editor.js?v=introduction-native-fix-20261124';
 import {examSegments, memoryFormat, mergeMemory, questionFields, validateMemory} from './translation-data.js?v=introduction-native-fix-20261124';
 import {applyTranslation,languageButton,toggleLanguage,restoreLanguage} from './translation.js?v=introduction-native-fix-20261124';
 import {openCalculator} from './calculator.js?v=introduction-native-fix-20261124';
@@ -11,7 +10,6 @@ const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=
 import {initializeStorage,read,write} from './storage.js?v=introduction-native-fix-20261124';
 let exams=[],selected,session=null,view='library',show=false,review=false,filter='all',message='',textSize=100;
 let saving=false;
-let optionsOpen=false;
 const own=(record,key,fallback)=>Object.hasOwn(record,key)?record[key]:fallback;
 
 async function save(changes,silent=false){
@@ -25,24 +23,14 @@ function textTools(){return `<div class="text-tools" role="group" aria-label="Te
 const passing=e=>Number.isInteger(e.passingScore)&&e.passingScore>=0&&e.passingScore<=1000?e.passingScore:700;
 const exam=()=>exams.find(e=>e.id===selected), fmt=n=>`${Math.floor(n/3600)}:${String(Math.floor(n/60)%60).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
 function frame(body,foot='',status=''){ $('#app').innerHTML=`<main class="shell ${['exam','section'].includes(view)?'exam-shell':''}"><header>${['exam','section'].includes(view)?`<span>${esc(session.exam.title)} <span class="candidate">· ${esc(session.candidate)}</span></span><span id="clock">${review?'':clock()}</span>`:`<span class="icon">P</span><span>${esc(session&&view!=='library'?session.exam.title+' – Exam A – ': '')}PMP Homework Platform</span>`}</header>${body}${status?`<div class="status">${status}</div>`:''}${foot?`<div class="footer">${foot}</div>`:''}</main>`; }
-function library(){session=null;view='library';frame(`<div class="strip app-toolbar"><span class="muted">Your personal exam practice library</span><span class="spacer"></span>${textTools()}</div><div class="content">${savedSessionsTable()}${examSettings()}<div class="library"><table><thead><tr><th>Title</th><th>File name</th><th>Questions</th></tr></thead><tbody>${exams.map(e=>`<tr tabindex="0" data-select="${esc(e.id)}" class="${e.id===selected?'selected':''}"><td>▣ &nbsp;${esc(e.number||'')} ${esc(e.title)}</td><td class="muted">${esc(e.title)}.json</td><td>${e.questions.length}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="primary" data-action="setup" ${exam()?'':'disabled'}>Start…</button><button data-action="import">Add…</button><button data-action="remove" ${exam()?'':'disabled'}>Remove</button><button data-action="properties" ${exam()?'':'disabled'}>Properties</button><button data-action="history">History</button><button data-action="refresh-app">Refresh app</button></div></div>${exams.length?'':'<p class="empty">Add your VCE exam to begin.</p>'}</div><div class="notice">Import .vce format 3.1 exams with text choices, JSON exams, or translation memory JSON. Unsupported VCE versions and question types are reported.</div>`, '', `${esc(message)} Select an exam and click Start. Progress and scores are stored in this browser.`);bind();$('#exam-settings')?.addEventListener('toggle',event=>{optionsOpen=event.target.open});$('#exam-options')?.addEventListener('submit',event=>event.preventDefault());}
+function library(){session=null;view='library';frame(`<div class="strip app-toolbar"><span class="muted">Your personal exam practice library</span><span class="spacer"></span>${textTools()}</div><div class="content">${savedSessionsTable()}<div class="library"><table><thead><tr><th>Title</th><th>File name</th><th>Questions</th></tr></thead><tbody>${exams.map(e=>`<tr tabindex="0" data-select="${esc(e.id)}" class="${e.id===selected?'selected':''}"><td>▣ &nbsp;${esc(e.number||'')} ${esc(e.title)}</td><td class="muted">${esc(e.title)}.json</td><td>${e.questions.length}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="primary" data-action="setup" ${exam()?'':'disabled'}>Start…</button><button data-action="import">Add…</button><button data-action="remove" ${exam()?'':'disabled'}>Remove</button><button data-action="history">History</button><button data-action="refresh-app">Refresh app</button></div></div>${exams.length?'':'<p class="empty">Add your VCE exam to begin.</p>'}</div><div class="notice">Import .vce format 3.1 exams with text choices, JSON exams, or translation memory JSON. Unsupported VCE versions and question types are reported.</div>`, '', `${esc(message)} Select an exam and click Start. Progress and scores are stored in this browser.`);bind();}
 function savedSessionsTable(){
  const saved=read('session',null);
  return `<section class="saved-sessions" aria-label="Saved sessions"><h2>Saved sessions</h2>${saved?`<div class="table-scroll"><table><thead><tr><th>Exam / Candidate</th><th>Progress</th><th>Time</th><th>Actions</th></tr></thead><tbody><tr><td>${esc(saved.exam.title)}<br><span class="muted">${esc(saved.candidate)}</span></td><td>${saved.questions.filter(q=>isAnswered(q,saved.answers[q.id])).length} / ${saved.questions.length} answered</td><td>${saved.limit===null?'Elapsed':'Remaining'}<br>${fmt(saved.limit===null?saved.elapsed:Math.max(0,saved.limit-saved.elapsed))}</td><td><button data-action="resume">Resume session</button> <button data-action="delete-session">Delete</button></td></tr></tbody></table></div>`:'<p class="muted">No saved session yet. During an exam, tap Save Session to continue later.</p>'}</section>`;
 }
 function modal(title,body,submit){const d=document.createElement('dialog');d.innerHTML=`<header>${esc(title)}</header><form>${body}<div class="dialogfoot"><button type="button" data-close>Cancel</button>${submit?'<button class="primary" type="submit">OK</button>':''}</div></form>`;document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.onclose=()=>d.remove();d.querySelector('form').onsubmit=e=>{e.preventDefault();if(submit)submit(new FormData(e.target),d)};d.showModal();return d;}
-function examSettings(){
- const e=exam();if(!e)return '';
- const sections=[...new Set(e.questions.map(q=>q.section))];
- return `<details id="exam-settings" ${optionsOpen?'open':''}><summary>Exam settings</summary><form id="exam-options"><fieldset><legend>Exam Mode</legend><label class="row"><input type="radio" name="mode" value="all" checked>Take selected exam: <b>Exam A</b></label><label class="row"><input type="radio" name="mode" value="sections">Take questions from selected sections only:</label><div class="sections">${sections.map((s,i)=>`<label class="row"><input name="section" type="checkbox" value="${i}">${esc(s)} (${e.questions.filter(q=>q.section===s).length})</label>`).join('')}</div><label class="row"><input type="radio" name="mode" value="count">Take <input name="count" type="number" value="${e.questions.length}" min="1" max="${e.questions.length}" style="width:70px"> questions from entire exam</label><label class="row"><input type="radio" name="mode" value="range">Take question range from <input name="from" type="number" value="1" min="1" max="${e.questions.length}" style="width:60px"> to <input name="to" type="number" value="${e.questions.length}" min="1" max="${e.questions.length}" style="width:60px"></label><label class="row"><input name="training" type="checkbox">Training mode (show answers while practicing)</label></fieldset><fieldset><legend>Timer</legend><label class="row"><input name="timer" type="checkbox" checked>Timer on <span class="spacer"></span>Time limit (minutes): <input name="minutes" type="number" min="1" max="1440" value="1000" style="width:80px"></label></fieldset></form></details>`;
-}
 function setup(){
  const e=exam();if(!e)return;
- const settings=$('#exam-options');
- if(!settings.checkValidity()){ $('#exam-settings').open=true;settings.reportValidity();return }
- const f=new FormData(settings);
- const sections=[...new Set(e.questions.map(q=>q.section))];
- let qs=e.questions;if(f.get('mode')==='sections')qs=qs.filter(q=>f.getAll('section').map(i=>sections[+i]).includes(q.section));if(f.get('mode')==='count')qs=[...qs].sort(()=>Math.random()-.5).slice(0,+f.get('count'));if(f.get('mode')==='range')qs=qs.slice(+f.get('from')-1,+f.get('to'));if(!qs.length){alert('Select at least one question or a valid range.');return}
  modal('Candidate name',`<label class="candidate-entry">Your name <input name="candidate" required autocomplete="name" maxlength="100" value="${esc(read('candidate',''))}"></label>`,(name,d)=>{
   const candidate=name.get('candidate').trim();
   if(!candidate){
@@ -52,7 +40,7 @@ function setup(){
    return;
   }
   save({candidate});
-  start(e,qs,candidate,f.has('timer')?+f.get('minutes')*60:null,f.has('training'));
+  start(e,e.questions,candidate,1000*60,false);
   d.close();
  });
 }
@@ -150,7 +138,6 @@ function renderExam(){
  if(q&&!paused&&!review&&!session.seen.includes(q.id))session.seen.push(q.id);
  const toolbar=q&&!paused?`<div class="exam-toolbar" role="group" aria-label="Exam tools">
  ${languageButton()}
- <button data-action="edit-translations">Edit Arabic</button>
  <button data-action="calculator">Calculator</button><span class="spacer"></span>
  <label class="flag-control"><input id="mark" type="checkbox" ${session.marked.includes(q.id)?'checked':''} ${review?'disabled':''}> Flag for Review</label>${textTools()}</div>`:'';
  const content=paused?pausePanel():`<div class="content question" data-translation-layout>${q?`
@@ -301,20 +288,6 @@ async function action(a){
    }
   }
   break;
- case 'properties':{
-  const d=modal('Exam Properties',`<h2>${esc(exam().title)}</h2><p>${exam().questions.length} questions · Passing score: ${passing(exam())}/1000</p><p>${[...new Set(exam().questions.map(q=>q.section))].map(esc).join('<br>')}</p><button type="button" data-edit-translations>Edit Arabic translations</button><button type="button" data-export-memory>Export translation memory</button>`);
-  d.querySelector('[data-edit-translations]').onclick=()=>{const target=exam();d.close();editTranslations(target);};
-  d.querySelector('[data-export-memory]').onclick=()=>{
-   const memory=read('translationMemory',{format:memoryFormat,segments:[],glossary:[]});
-   const url=URL.createObjectURL(new Blob([JSON.stringify(memory,null,2)],{type:'application/json'}));
-   const link=document.createElement('a');
-   link.href=url;
-   link.download='pmp-translation-memory.json';
-   link.click();
-   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  };
-  break;
- }
  case 'history':historyDialog();break;
  case 'resume':resumeSession();break;
  case 'delete-session':
@@ -346,7 +319,6 @@ async function action(a){
  }
  case 'end':confirmEnd();break;
  case 'navigator':navigatorDialog();break;
- case 'edit-translations':editTranslations(exams.find(e=>e.id===session.exam.id)||{...session.exam,questions:session.questions});break;
  case 'language':
   toggleLanguage();
   translateQuestion(visible()[session.index]);
@@ -438,16 +410,4 @@ try{
  library();
 }catch{
  frame('<div class="content" role="alert">Browser storage could not be opened. Reload this page to retry.</div>');
-}
-
-async function editTranslations(target){
- try{
-  await openTranslationEditor({exam:target,memory:read('translationMemory',null),modal,questionId:session&&view==='exam'?visible()[session.index]?.id:undefined,
-   commit:async(snapshot,memory)=>{
-    const ok=await save({exams:items=>(items||[]).map(e=>e.id===target.id?{...e,sourceId:snapshot.sourceId,questions:snapshot.questions}:e),translationMemory:previous=>mergeMemory(previous,memory)});
-    if(ok){target.sourceId=snapshot.sourceId;target.questions=snapshot.questions;if(session?.exam.id===target.id)session.exam.sourceId=snapshot.sourceId;loadExams();}
-    return ok;
-   },onSaved:()=>{if(session&&view==='exam')translateQuestion(visible()[session.index]);}
-  });
- }catch(error){alert('Translation editor: '+error.message);}
 }

@@ -12,7 +12,7 @@ npm test
 npm start
 ```
 
-The server listens on port 3000. Open the app in a browser. Add your exam, select it, and click Start to enter your name. Use Exam settings in the library to change question selection, training mode, or the default 1,000-minute countdown.
+The server listens on port 3000. Open the app in a browser. Add your exam, select it, and click Start to enter your name. New sessions start with all questions and the default 1,000-minute countdown.
 
 Features include single/multiple-choice questions, section/count/range selection, marking, pause, local session save/resume, answer explanations in every exam mode, automatic submission at timeout, scores out of 1000 (700 to pass by default; native VCE threshold retained), section breakdowns, filtered review and retakes, history, and printable reports. Browser local storage retains exams, sessions, and up to 50 reports. Data stays in the current browser; clearing browser data deletes it. The timer runs while the page is open and unpaused; this is a practice tool, not a proctored exam system.
 
@@ -85,19 +85,13 @@ Each question can contain `translation: {version: 1, fields: {…}}`. Fields are
 
 ### Reuse and revise translations
 
-An imported bilingual exam adds its translated segments to local memory. **Properties → Export translation memory** downloads a private backup. A memory file has `format: "pmp-translation-memory-v1"`, a `segments` array, and a `glossary` array of `{en, ar}` terms. Each memory segment includes `role`, `en`, `ar`, and `status`. Roles match exam field names except that choices use `option` and matching subjects use `matchingSubject`. An optional `scope` contains `examId`, `questionId`, `field`, `sourceHash`, and zero-based `index`.
+An imported bilingual exam adds its translated segments to local memory. A memory file has `format: "pmp-translation-memory-v1"`, a `segments` array, and a `glossary` array of `{en, ar}` terms. Each memory segment includes `role`, `en`, `ar`, and `status`. Roles match exam field names except that choices use `option` and matching subjects use `matchingSubject`. An optional `scope` contains `examId`, `questionId`, `field`, `sourceHash`, and zero-based `index`.
 
 The current verified scoped record takes precedence. For other questions, the player can reuse an unambiguous exact match in the same field role. Set `reusable: true` on verified sentences that can also be reused within longer passages, or `reusable: false` to restrict a segment to its scope. English remains visible when no suitable verified match exists. The glossary is a reference for preparing and reviewing translations. It is never used to substitute individual words in the player.
 
 To correct an existing translation, export the memory, copy the relevant record with its existing scope, edit the Arabic and status, and import the correction. Import retains prior revisions and uses the latest distinct scoped record. Import vocabulary updates using the same memory format. Keep backups of private exam and memory files outside the public repository.
 
 Run `scripts/translation-regression.mjs` with Playwright and the app running locally to check both layouts, offline display, partial reuse, review, and session state.
-
-### Local correction editor
-
-**Properties → Edit Arabic translations** opens the editor for the selected exam. During an exam or review, **Edit Arabic** opens the current question. English, choices, matching relationships, and grading keys are read-only. Each nonblank source block has a separate Arabic field, verification status, reuse policy, and ambiguity/context note. New entries default to needing review; they remain English in the exam until marked verified. Choose reuse for this question only, exact same-role text, or whole sentences. Never mark a translation verified merely because a glossary word matched.
-
-Save commits the translation and its revision to the existing browser storage. Export bilingual exam includes the untouched English, original keys, stable identifiers, source fingerprints, and current translation fields. Export translation memory includes retained revisions and glossary entries. A repeated import of an earlier revision now makes that wording current again. Downloaded files may contain private exam text; keep them outside the public repository and back them up separately. No translation service or model is called by this editor.
 
 ### Introduction VCE: Arabic included
 
