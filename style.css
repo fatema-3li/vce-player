@@ -48,6 +48,7 @@
 }
 .app-toolbar,.exam-toolbar {background:var(--player-toolbar-blue);border-bottom-color:#3263a5}
 .app-toolbar .muted {color:#fff}
+.app-toolbar .library-credit {color:inherit;text-decoration:underline}
 .exam-toolbar {padding:8px 20px;border-bottom:1px solid #3263a5}
 .exam-shell button,.exam-shell select {color:var(--exam-ink);border-color:#b4c8df;background:#fff}
 .exam-shell button:hover {background:#e4effc}
